@@ -1,0 +1,53 @@
+services:
+
+  api:
+    build: ./docker/php
+    container_name: videobay_api
+    working_dir: /var/www
+    volumes:
+      - ./backend:/var/www
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    command: php artisan serve --host=0.0.0.0 --port=8000
+
+  frontend:
+    build: ./docker/frontend
+    container_name: videobay_frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "4200:4200"
+    environment:
+      CHROME_BIN: /usr/bin/chromium
+    command: bash -c "npm install && npm start -- --host 0.0.0.0"
+
+  db:
+    image: mysql:8
+    container_name: videobay_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: videobay
+    ports:
+      - "3306:3306"
+
+  dbgate:
+    image: dbgate/dbgate
+    container_name: videobay_dbgate
+    ports:
+      - "9051:3000"
+    depends_on:
+      - db
+    environment:
+      CONNECTIONS: videobay
+      LABEL_videobay: VideoBay MySQL
+      SERVER_videobay: db
+      USER_videobay: root
+      PASSWORD_videobay: root
+      PORT_videobay: "3306"
+      DATABASE_videobay: videobay
+      ENGINE_videobay: mysql@dbgate-plugin-mysql
+    volumes:
+      - ./docker/dbgate-data:/root/.dbgate

@@ -1,0 +1,71 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.fleet/
+.nova/
+.zed/
+.phpactor.json
+
+# Env (no subir secretos; .env.example sí se versiona)
+.env
+.env.local
+.env.*.local
+.env.backup
+.env.production
+
+# --- Backend (Laravel) ---
+backend/vendor/
+backend/node_modules/
+backend/.phpunit.cache/
+backend/phpunit.result.cache
+backend/public/build/
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+backend/storage/pail/
+backend/bootstrap/cache/*.php
+backend/auth.json
+Homestead.json
+Homestead.yaml
+
+# --- Frontend (Angular / npm) ---
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/out-tsc/
+frontend/.cache/
+frontend/.tmp/
+frontend/*.tsbuildinfo
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.npm
+frontend/coverage/
+frontend/.nyc_output/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# --- Api (si se usa como copia/espejo del backend)
+api/vendor/
+api/node_modules/
+api/.env
+api/public/build/
+api/public/hot
+api/storage/*.key
+api/.phpunit.cache/
+
+# --- Docker (datos locales de contenedores) ---
+docker/dbgate-data/
+
+# Logs y cachés genéricos
+*.log
+.cache/
