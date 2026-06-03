@@ -1,4 +1,6 @@
 videobay.dev, www.videobay.dev {
+    tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
+
     @www host www.videobay.dev
     redir @www https://videobay.dev{uri} permanent
 

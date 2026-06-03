@@ -43,6 +43,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
       - frontend_dist:/srv/frontend:ro
+      - /srv/videobay/certs:/etc/caddy/certs:ro
     depends_on:
       - api
       - frontend
