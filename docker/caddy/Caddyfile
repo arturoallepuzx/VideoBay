@@ -1,0 +1,44 @@
+videobay.dev, www.videobay.dev {
+    @www host www.videobay.dev
+    redir @www https://videobay.dev{uri} permanent
+
+    handle /api/admin/videos/upload {
+        request_body {
+            max_size 128MB
+        }
+        root * /var/www/public
+        php_fastcgi api:9000
+    }
+
+    handle /api/* {
+        request_body {
+            max_size 2MB
+        }
+        root * /var/www/public
+        php_fastcgi api:9000
+    }
+
+    handle {
+        root * /srv/frontend
+        try_files {path} /index.html
+        file_server
+        encode gzip zstd
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+        -Server
+    }
+
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 50mb
+            roll_keep 10
+        }
+        format json
+    }
+}
