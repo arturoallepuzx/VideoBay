@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Shared\Domain\ValueObject;
 
 class DomainDateTime
@@ -29,5 +31,10 @@ class DomainDateTime
     public function format(string $format): string
     {
         return $this->value->format($format);
+    }
+
+    public function equals(self $other): bool
+    {
+        return $this->value == $other->value;
     }
 }
