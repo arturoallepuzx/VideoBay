@@ -11,6 +11,12 @@ interface ReviewLikeRepositoryInterface
 {
     public function exists(Uuid $reviewId, Uuid $userId): bool;
 
+    /**
+     * @param  list<Uuid>  $reviewIds
+     * @return list<string>
+     */
+    public function likedReviewIds(array $reviewIds, Uuid $userId): array;
+
     public function add(ReviewLike $like): void;
 
     public function remove(Uuid $reviewId, Uuid $userId): bool;

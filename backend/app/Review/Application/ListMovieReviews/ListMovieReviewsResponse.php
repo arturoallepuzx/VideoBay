@@ -20,11 +20,14 @@ final readonly class ListMovieReviewsResponse
     /**
      * @param  array{items: list<Review>, total: int, page: int, totalPages: int}  $result
      * @param  array<string, UserDisplay>  $authorDisplays
+     * @param  list<string>  $likedReviewIds
      */
-    public static function create(array $result, array $authorDisplays): self
+    public static function create(array $result, array $authorDisplays, array $likedReviewIds = []): self
     {
+        $likedSet = array_fill_keys($likedReviewIds, true);
+
         $items = array_map(
-            fn (Review $review): array => self::reviewToArray($review, $authorDisplays),
+            fn (Review $review): array => self::reviewToArray($review, $authorDisplays, $likedSet),
             $result['items'],
         );
 
@@ -49,9 +52,10 @@ final readonly class ListMovieReviewsResponse
 
     /**
      * @param  array<string, UserDisplay>  $authorDisplays
+     * @param  array<string, true>  $likedSet
      * @return array<string, mixed>
      */
-    private static function reviewToArray(Review $review, array $authorDisplays): array
+    private static function reviewToArray(Review $review, array $authorDisplays, array $likedSet): array
     {
         $author = $authorDisplays[$review->userId()->value()] ?? null;
 
@@ -61,6 +65,7 @@ final readonly class ListMovieReviewsResponse
             'body' => $review->body()?->value(),
             'contains_spoilers' => $review->containsSpoilers(),
             'likes_count' => $review->likesCount(),
+            'liked' => isset($likedSet[$review->id()->value()]),
             'created_at' => $review->createdAt()->value()->format(\DateTimeInterface::ATOM),
             'updated_at' => $review->updatedAt()->value()->format(\DateTimeInterface::ATOM),
             'author' => $author !== null

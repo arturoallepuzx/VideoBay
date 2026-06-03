@@ -34,6 +34,32 @@ class EloquentReviewLikeRepository implements ReviewLikeRepositoryInterface
             ->exists();
     }
 
+    public function likedReviewIds(array $reviewIds, Uuid $userId): array
+    {
+        if ($reviewIds === []) {
+            return [];
+        }
+
+        $uuidValues = array_map(fn (Uuid $id): string => $id->value(), $reviewIds);
+
+        /** @var \Illuminate\Support\Collection<int, string> $idMap */
+        $idMap = EloquentReview::query()
+            ->whereIn('uuid', $uuidValues)
+            ->pluck('uuid', 'id');
+
+        if ($idMap->isEmpty()) {
+            return [];
+        }
+
+        return $this->connection->table(self::TABLE)
+            ->where('user_id', $this->userIdResolver->toInternalId($userId))
+            ->whereIn('review_id', $idMap->keys()->all())
+            ->pluck('review_id')
+            ->map(fn ($internalId): string => (string) $idMap[(int) $internalId])
+            ->values()
+            ->all();
+    }
+
     public function add(ReviewLike $like): void
     {
         $internalReviewId = $this->resolveReviewInternalId($like->reviewId());
