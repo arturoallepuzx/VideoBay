@@ -14,34 +14,35 @@ class UserFactory extends Factory
 {
     protected $model = EloquentUser::class;
 
-    /**
-     * The current password being used by the factory.
-     */
     protected static ?string $password;
 
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
             'uuid' => (string) Str::uuid(),
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'name' => 'User '.Str::random(12),
+            'email' => Str::random(12).'@example.test',
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'password_hash' => static::$password ??= Hash::make('password'),
+            'avatar_url' => null,
+            'role' => 'customer',
+            'accessibility_settings' => [],
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'role' => 'admin',
+        ]);
+    }
+
     public function unverified(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes): array => [
             'email_verified_at' => null,
         ]);
     }
