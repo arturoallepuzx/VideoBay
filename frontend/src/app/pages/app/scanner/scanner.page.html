@@ -1,0 +1,150 @@
+<div class="page page--narrow fade-in" style="padding-bottom:120px">
+  <div class="eyebrow">● ESCÁNER</div>
+  <h1 class="h-section" style="margin-top:6px;margin-bottom:8px">Escanear código de barras</h1>
+  <p class="muted body" style="margin-bottom:24px">
+    Apunta al código EAN del estuche o introdúcelo a mano. Te decimos qué película es y puedes ver su ficha,
+    consultar stock y precios en tienda, o ponerla a la venta.
+  </p>
+
+  @if (result(); as r) {
+    <div class="stat-card" style="padding:28px">
+      <div style="display:flex;gap:20px;align-items:flex-start">
+        <div style="width:96px;height:144px;flex-shrink:0;border-radius:var(--r-xs);overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center">
+          @if (posterPath(); as poster) {
+            <img style="width:100%;height:100%;object-fit:cover" [src]="poster | tmdbImage: 'poster'" alt="" />
+          } @else {
+            <ion-icon name="film-outline" style="font-size:34px;color:var(--text-3)"></ion-icon>
+          }
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="mono tiny muted" style="letter-spacing:0.08em">CÓDIGO {{ scannedCode() }}</div>
+          @if (r.movie; as m) {
+            <h2 class="h-card" style="margin:8px 0 0;line-height:1.15">{{ m.title }}</h2>
+          } @else if (r.external_title) {
+            <h2 class="h-card" style="margin:8px 0 0;line-height:1.15">{{ r.external_title }}</h2>
+            <div class="tiny muted" style="margin-top:8px">No está en el catálogo local todavía.</div>
+          } @else {
+            <h2 class="h-card" style="margin:8px 0 0;line-height:1.15">Código no reconocido</h2>
+            <div class="tiny muted" style="margin-top:8px">No lo encontramos en VideoBay ni en TMDB.</div>
+          }
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:24px">
+        @if (r.movie; as m) {
+          <button class="btn btn--primary" style="width:100%;justify-content:center" (click)="openMovie(m.uuid)">
+            <ion-icon name="eye-outline"></ion-icon> Ver ficha
+          </button>
+          <button class="btn" style="width:100%;justify-content:center" (click)="loadStock(m.uuid)">
+            <ion-icon name="cube-outline"></ion-icon> Ver stock y precios
+          </button>
+          <button class="btn" style="width:100%;justify-content:center" (click)="sell()">
+            <ion-icon name="cloud-upload-outline"></ion-icon> Vender mi copia
+          </button>
+        } @else if (r.external_title) {
+          <button class="btn btn--primary" style="width:100%;justify-content:center" (click)="search(r.external_title)">
+            <ion-icon name="search-outline"></ion-icon> Buscar título
+          </button>
+          <button class="btn" style="width:100%;justify-content:center" (click)="sell()">
+            <ion-icon name="cloud-upload-outline"></ion-icon> Vender mi copia
+          </button>
+        } @else {
+          <button class="btn" style="width:100%;justify-content:center" (click)="sell()">
+            <ion-icon name="cloud-upload-outline"></ion-icon> Vender de todas formas
+          </button>
+        }
+      </div>
+
+      @if (r.candidates.length && !r.movie) {
+        <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+          <div class="lbl" style="margin-bottom:14px">¿Es alguna de estas?</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            @for (candidate of r.candidates; track candidate.tmdb_id) {
+              <div style="display:flex;gap:12px;align-items:center;cursor:pointer" (click)="openMovie(candidate.tmdb_id)">
+                <div style="width:40px;height:60px;flex-shrink:0;border-radius:var(--r-xs);overflow:hidden;background:var(--surface-2)">
+                  @if (candidate.poster_path) {
+                    <img style="width:100%;height:100%;object-fit:cover" [src]="candidate.poster_path | tmdbImage: 'poster'" alt="" />
+                  }
+                </div>
+                <div style="min-width:0;flex:1">
+                  <div style="font-family:var(--serif);font-size:15px">{{ candidate.title }}</div>
+                  <div class="mono tiny muted">{{ candidate.release_date }}</div>
+                </div>
+                <ion-icon name="chevron-forward" style="color:var(--text-3)"></ion-icon>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      @if (loadingCopies()) {
+        <div class="tiny muted" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">Cargando stock…</div>
+      } @else if (copies(); as list) {
+        <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+          <div class="lbl" style="margin-bottom:14px">Stock en tienda</div>
+          @if (list.length) {
+            <div style="display:flex;flex-direction:column;gap:14px">
+              @for (copy of list; track copy.id) {
+                <div style="display:flex;gap:12px;align-items:center;cursor:pointer" (click)="openCopy(copy.id)">
+                  <div style="min-width:0;flex:1">
+                    <div style="font-family:var(--serif);font-size:15px">{{ copy.format }} · <span class="muted">{{ copy.condition }}</span></div>
+                    <div class="mono tiny muted">{{ copy.stock_available }} en stock</div>
+                  </div>
+                  <span class="mono" style="font-weight:700;font-size:15px">{{ copy.price_cents | money }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="tiny muted" style="margin:0">No hay copias a la venta de este título ahora mismo.</p>
+          }
+        </div>
+      }
+    </div>
+
+    <button class="btn" style="margin-top:16px" (click)="scanAnother()">
+      <ion-icon name="barcode-outline"></ion-icon> Escanear otro
+    </button>
+  } @else {
+    <div class="scanner">
+      <video #video class="scanner__cam" style="width:100%;height:100%;object-fit:cover" [hidden]="!scanning()"></video>
+      @if (!scanning()) {
+        <div class="scanner__cam" style="display:flex;align-items:center;justify-content:center;color:var(--text-3)">
+          <ion-icon name="camera-outline" style="font-size:48px"></ion-icon>
+        </div>
+      }
+      <div class="scanner__viewfinder">
+        <div class="scanner__corners"></div>
+        @if (scanning()) { <div class="scanner__line"></div> }
+      </div>
+      @if (scanning()) { <div class="scanner__hint">Buscando código…</div> }
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:24px;justify-content:center">
+      @if (!scanning()) {
+        <button class="btn btn--primary" (click)="startCamera()">
+          <ion-icon name="camera-outline"></ion-icon> Escanear con cámara
+        </button>
+      } @else {
+        <button class="btn" (click)="stopCamera()">Detener</button>
+      }
+    </div>
+
+    @if (error()) {
+      <div class="tiny" style="color:var(--vb-red);text-align:center;margin-top:12px">{{ error() }}</div>
+    }
+
+    <div style="margin-top:32px;border-top:1px solid var(--border);padding-top:24px">
+      <div class="field" style="margin-bottom:0">
+        <label class="field__label">O introduce el código a mano</label>
+        <div style="display:flex;gap:8px">
+          <input class="field__input" [(ngModel)]="manualCode" placeholder="8412345678901" (keyup.enter)="submitManual()" />
+          <button class="btn btn--primary" [disabled]="resolving()" (click)="submitManual()">Buscar</button>
+        </div>
+      </div>
+    </div>
+
+    @if (resolving()) {
+      <div class="tiny muted" style="text-align:center;margin-top:16px">Resolviendo código…</div>
+    }
+  }
+</div>

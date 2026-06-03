@@ -1,3 +1,30 @@
-<ion-app>
-  <ion-router-outlet></ion-router-outlet>
-</ion-app>
+<div class="app" [class.app--chrome]="showChrome()">
+  @if (loading.active()) {
+    <div class="loading-bar" aria-hidden="true"></div>
+  }
+
+  <vb-nav-drawer></vb-nav-drawer>
+
+  @if (showChrome()) {
+    <vb-top-nav></vb-top-nav>
+  }
+
+  <main class="main">
+    <router-outlet></router-outlet>
+  </main>
+
+  @if (showChrome()) {
+    <vb-mobile-tabs></vb-mobile-tabs>
+  }
+
+  <vb-cart-flyout></vb-cart-flyout>
+  <vb-notification-flyout></vb-notification-flyout>
+
+  <vb-toast-stack></vb-toast-stack>
+
+  @if (!ready()) {
+    <div class="app-splash">
+      <vb-logo [size]="40"></vb-logo>
+    </div>
+  }
+</div>

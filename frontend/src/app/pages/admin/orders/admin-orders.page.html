@@ -1,0 +1,69 @@
+<div class="admin-layout fade-in">
+  <vb-admin-sidebar></vb-admin-sidebar>
+  <main class="admin-main">
+    <div class="eyebrow">● ADMIN · PEDIDOS</div>
+    <h1 class="h-section" style="margin-top:6px;margin-bottom:20px">Gestión de pedidos</h1>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      @for (tab of tabs; track tab.value) {
+        <button class="btn" [class.btn--primary]="activeStatus() === tab.value" (click)="selectStatus(tab.value)">
+          {{ tab.label }}
+        </button>
+      }
+    </div>
+
+    <div class="search" style="max-width:480px;margin-bottom:20px">
+      <span class="search__icon"><ion-icon name="search-outline" style="font-size:16px"></ion-icon></span>
+      <input class="search__input" [ngModel]="search()" (ngModelChange)="search.set($event)"
+        placeholder="Buscar por código de recogida…" />
+    </div>
+
+    @if (loading() && !filtered().length) {
+      <div class="mod-list">
+        @for (s of skeletons; track $index) { <div class="skel mod-skel"></div> }
+      </div>
+    } @else if (filtered().length) {
+      <div class="table-scroll">
+      <table class="table table--cards">
+        <thead>
+          <tr><th>Pedido</th><th>Código</th><th>Items</th><th>Total</th><th>Pagado</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (order of filtered(); track order.id) {
+            <tr>
+              <td data-label="Pedido" class="mono tiny">{{ order.id.slice(0, 8) }}</td>
+              <td data-label="Código">
+                @if (order.pickup_code) {
+                  <span class="pickup-code">{{ order.pickup_code }}</span>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+              <td data-label="Items">{{ units(order) }}</td>
+              <td data-label="Total" class="mono">{{ order.total_cents | money }}</td>
+              <td data-label="Pagado" class="mono tiny">{{ order.paid_at ? (order.paid_at | date:'dd MMM HH:mm') : '—' }}</td>
+              <td data-label="Estado"><span class="status-pill {{ statusClass(order.status) }}">{{ statusLabel(order.status) }}</span></td>
+              <td data-label="Acciones">
+                @if (order.status === 'ready_for_pickup' && order.pickup_code) {
+                  <a class="btn" [routerLink]="['/admin/pickup']" [queryParams]="{ code: order.pickup_code }">
+                    <ion-icon name="checkmark"></ion-icon> Recogida
+                  </a>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+        <span class="mono tiny muted">{{ total() }} pedidos</span>
+        @if (page() < totalPages()) {
+          <button class="btn" [disabled]="loading()" (click)="loadMore()">Cargar más</button>
+        }
+      </div>
+    } @else if (!loading()) {
+      <p class="muted body">No hay pedidos con este filtro.</p>
+    }
+  </main>
+</div>

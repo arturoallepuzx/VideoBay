@@ -1,0 +1,270 @@
+@if (movie(); as m) {
+  <div class="fade-in">
+    <div class="detail__hero">
+      @if (m.backdrop_path) {
+        <div class="detail__backdrop"><img [src]="m.backdrop_path | tmdbImage: 'backdrop'" alt="" /></div>
+      }
+      <div class="detail__inner">
+        <div class="detail__poster">
+          <img [src]="m.poster_path | tmdbImage: 'poster'" [alt]="'Póster de ' + m.title" />
+        </div>
+        <div>
+          <div class="eyebrow">● FICHA DE PELÍCULA</div>
+          <h1 class="detail__title">{{ m.title }}</h1>
+          @if (m.original_title && m.original_title !== m.title) {
+            <div class="detail__orig">«{{ m.original_title }}»</div>
+          }
+          <div class="detail__meta">
+            @if (m.release_date) {
+              <span>{{ creditYear(m.release_date) }}</span><span class="pipe">/</span>
+            }
+            @if (m.runtime_minutes) {
+              <span>{{ m.runtime_minutes | runtime }}</span><span class="pipe">/</span>
+            }
+            @if (directors().length) {
+              <a class="detail__person-link" (click)="openPerson(directors()[0])">{{ directors()[0].person_name }}</a>
+            }
+          </div>
+          <div class="detail__genres">
+            @for (genre of m.genres; track genre.name) {
+              <span class="chip">{{ genre.name }}</span>
+            }
+            @if (m.tmdb_rating !== null) {
+              <span class="rating-pill" style="margin-left:8px">
+                <span class="num">{{ m.tmdb_rating | number: '1.1-1' }}</span>
+                <span class="lbl">/ 10</span>
+              </span>
+            }
+          </div>
+          @if (m.overview) {
+            <p class="detail__synopsis">{{ m.overview }}</p>
+          }
+          <div class="detail__actions">
+            @if (m.streamable) {
+              <button class="btn btn--primary btn--lg" (click)="play()">
+                <ion-icon name="play"></ion-icon> Ver streaming
+              </button>
+            }
+            @if (copies().length) {
+              <button class="btn btn--lg" (click)="scrollToCopies()">
+                <ion-icon name="bag-outline"></ion-icon> Comprar copia · desde {{ minPriceCents() | money }}
+              </button>
+            }
+            <button class="btn" [class.btn--primary]="wishlist.isWished(m.uuid)" (click)="wish()">
+              <ion-icon [name]="wishlist.isWished(m.uuid) ? 'heart' : 'heart-outline'"></ion-icon>
+              {{ wishlist.isWished(m.uuid) ? 'En tu lista' : 'Wishlist' }}
+            </button>
+            <button class="btn" [class.btn--primary]="wishlist.isWatchLater(m.uuid)" (click)="later()">
+              <ion-icon [name]="wishlist.isWatchLater(m.uuid) ? 'bookmark' : 'bookmark-outline'"></ion-icon>
+              {{ wishlist.isWatchLater(m.uuid) ? 'Guardado' : 'Ver más tarde' }}
+            </button>
+          </div>
+          <div class="detail__credits">
+            <div>
+              <div class="detail__credit-label">Dirección</div>
+              <div class="detail__credit-value">
+                @for (director of directors(); track director.person_uuid) {
+                  <a class="detail__person-link" (click)="openPerson(director)">{{ director.person_name }}</a>
+                  @if (!$last) {<span>, </span>}
+                }
+              </div>
+            </div>
+            <div>
+              <div class="detail__credit-label">Reparto principal</div>
+              <div class="detail__credit-value">
+                @for (actor of cast().slice(0, 3); track actor.person_uuid) {
+                  <a class="detail__person-link" (click)="openPerson(actor)">{{ actor.person_name }}</a>
+                  @if (!$last) {<span>, </span>}
+                }
+              </div>
+            </div>
+            <div>
+              <div class="detail__credit-label">En tienda</div>
+              <div class="detail__credit-value">
+                @if (copies().length) {
+                  <span class="badge">{{ totalStock() }} copias</span>
+                } @else {
+                  <span class="mono tiny">Sin copias</span>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    @if (cast().length) {
+      <section class="section">
+        <div class="section__head"><h2 class="h-section">Reparto</h2></div>
+        <div class="section__body">
+          <div class="cast" #castScroller (pointerdown)="onCastDown($event)" (pointermove)="onCastMove($event)"
+            (pointerup)="onCastUp($event)" (pointercancel)="onCastUp($event)" (pointerleave)="onCastUp($event)">
+            @for (actor of cast(); track actor.person_uuid) {
+              <button class="cast__person" (click)="openPerson(actor)">
+                <div class="cast__photo">
+                  @if (actor.person_profile_path) {
+                    <img [src]="actor.person_profile_path | tmdbImage: 'profile'" [alt]="actor.person_name" loading="lazy" draggable="false" />
+                  } @else {
+                    <ion-icon name="person"></ion-icon>
+                  }
+                </div>
+                <div class="cast__name">{{ actor.person_name }}</div>
+                <div class="cast__role">{{ actor.character_name }}</div>
+              </button>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <section class="section" id="copies">
+      <div class="section__head">
+        <div>
+          <h2 class="h-section">Copias físicas en tienda</h2>
+          <p class="sub">Recogida en tienda. Sin envíos.</p>
+        </div>
+        @if (copies().length) {
+          <span class="mono tiny">{{ totalStock() }} en stock total</span>
+        }
+      </div>
+      <div class="section__body">
+        @if (!copies().length) {
+          <vb-empty-state icon="cube-outline" title="Sin copias en tienda" hint="¿Tienes una? Vende la tuya.">
+            <button class="btn btn--primary" (click)="openMovie(m.uuid)">Vender a la tienda</button>
+          </vb-empty-state>
+        } @else {
+          <div class="copies-list">
+            @for (copy of copies(); track copy.id) {
+              <div class="copy-row" style="cursor:pointer" (click)="openCopy(copy)">
+                <span class="mono tiny" style="color:var(--text-3)">{{ copy.sku }}</span>
+                <span class="copy-row__format"
+                  [class.copy-row__format--4k]="copy.format === '4K'"
+                  [class.copy-row__format--bluray]="copy.format === 'Blu-ray'">{{ copy.format }}</span>
+                <div>
+                  <div class="copy-row__cond">Estado: <strong>{{ copy.condition }}</strong>
+                    @if (copy.region) {· Región {{ copy.region }}}
+                  </div>
+                </div>
+                <span class="copy-row__stock" [class.low]="copy.stock_available === 1" [class.zero]="copy.stock_available === 0">
+                  {{ copy.stock_available === 0 ? 'Agotada' : copy.stock_available === 1 ? 'Última copia' : copy.stock_available + ' disponibles' }}
+                </span>
+                <span class="copy-row__price">{{ copy.price_cents | money: copy.currency }}</span>
+                <button class="btn"
+                  [class.btn--primary]="copy.stock_available > 0"
+                  [class.btn--added]="cart.lastAdded() === copy.id"
+                  [disabled]="copy.stock_available === 0" (click)="addCopyToCart(copy); $event.stopPropagation()">
+                  {{ cart.lastAdded() === copy.id ? 'Añadido' : (copy.stock_available === 0 ? 'Sin stock' : 'Añadir') }}
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section__head">
+        <div><h2 class="h-section">Reseñas de la comunidad</h2></div>
+        <button class="btn btn--primary" (click)="showReviewForm.set(!showReviewForm())">Escribir reseña</button>
+      </div>
+      <div class="section__body" style="max-width:900px">
+        @if (showReviewForm()) {
+          <div style="border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:20px;margin-bottom:20px">
+            <div class="field">
+              <label class="field__label">Tu puntuación</label>
+              <div class="star-rate" (mouseleave)="hoverRating.set(null)">
+                @for (slot of starSlots; track slot) {
+                  <span class="star-rate__star">
+                    <ion-icon [name]="starIconName(starState(slot, displayRating()))"></ion-icon>
+                    <button type="button" class="star-rate__hit star-rate__hit--l"
+                      (mouseenter)="hoverRating.set(slot * 2 - 1)" (click)="reviewRating.set(slot * 2 - 1)"
+                      [attr.aria-label]="(slot * 2 - 1) + ' de 10'"></button>
+                    <button type="button" class="star-rate__hit star-rate__hit--r"
+                      (mouseenter)="hoverRating.set(slot * 2)" (click)="reviewRating.set(slot * 2)"
+                      [attr.aria-label]="(slot * 2) + ' de 10'"></button>
+                  </span>
+                }
+                <span class="star-rate__value">{{ displayRating() / 2 | number: '1.1-1' }} / 5</span>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field__label">Tu reseña</label>
+              <textarea class="field__textarea" [(ngModel)]="reviewBody" placeholder="¿Qué te pareció?"></textarea>
+            </div>
+            <label class="filter-check" style="margin-bottom:14px">
+              <input type="checkbox" [(ngModel)]="reviewSpoilers" /><span>Contiene spoilers</span>
+            </label>
+            <button class="btn btn--primary" (click)="submitReview()">Publicar reseña</button>
+          </div>
+        }
+
+        @if (!reviews().length) {
+          <vb-empty-state title="Aún no hay reseñas" hint="Sé el primero en compartir tu opinión."></vb-empty-state>
+        } @else {
+          @for (review of reviews(); track review.id) {
+            <article class="review">
+              <div class="review__avatar">
+                @if (review.author?.avatar_url) {
+                  <img [src]="review.author!.avatar_url" [alt]="review.author?.name ?? ''" />
+                } @else {
+                  <span>{{ (review.author?.name ?? '?').charAt(0) }}</span>
+                }
+              </div>
+              <div class="review__main">
+                <div class="review__top">
+                  <span class="review__author">{{ review.author?.name ?? 'Anónimo' }}</span>
+                  <span class="review__stars">
+                    @for (star of starsFor(review.rating); track $index) {
+                      <ion-icon [name]="star === 'full' ? 'star' : star === 'half' ? 'star-half' : 'star-outline'"></ion-icon>
+                    }
+                  </span>
+                  <span class="review__date">{{ review.created_at | date: 'd MMM yyyy' }}</span>
+                </div>
+                @if (review.body) {
+                  <div class="review__body"
+                    [class.spoilers]="review.contains_spoilers && !revealed().has(review.id)"
+                    [class.revealed]="review.contains_spoilers && revealed().has(review.id)"
+                    (click)="review.contains_spoilers && toggleSpoiler(review.id)">{{ review.body }}</div>
+                }
+                <div class="review__foot">
+                  <button class="review__like" [class.is-liked]="review.liked" (click)="likeReview(review)"
+                    [attr.aria-label]="review.liked ? 'Quitar me gusta' : 'Me gusta'">
+                    <ion-icon [name]="review.liked ? 'heart' : 'heart-outline'"></ion-icon>
+                    @if (review.likes_count) {<span>{{ review.likes_count }}</span>}
+                  </button>
+                  @if (isOwnReview(review)) {
+                    <button class="review__report" (click)="askDeleteReview(review)" aria-label="Eliminar reseña">
+                      <ion-icon name="trash-outline"></ion-icon><span>Eliminar</span>
+                    </button>
+                  } @else {
+                    <vb-report-menu triggerClass="review__report" label="Reportar"
+                      title="Reportar reseña" [reasons]="reviewReasons" (picked)="reportReview(review, $event)" />
+                  }
+                </div>
+              </div>
+            </article>
+          }
+        }
+      </div>
+    </section>
+
+    @if (similar().length) {
+      <section class="section" style="border-bottom:0">
+        <div class="section__head"><h2 class="h-section">Películas relacionadas</h2></div>
+        <div class="section__body">
+          <div class="movie-grid">
+            @for (related of similar(); track related.movie_id) {
+              <vb-movie-card [movie]="related" (open)="openMovie(related.movie_id)"
+                (wish)="saveSimilarWish(related)" (watchLater)="saveSimilarLater(related)"></vb-movie-card>
+            }
+          </div>
+        </div>
+      </section>
+    }
+  </div>
+
+  <vb-confirm-dialog [open]="reviewToDelete() !== null" title="Eliminar reseña"
+    message="¿Seguro que quieres eliminar tu reseña? Esta acción no se puede deshacer."
+    confirmLabel="Eliminar" [danger]="true"
+    (confirm)="confirmDeleteReview()" (cancel)="cancelDeleteReview()" />
+}

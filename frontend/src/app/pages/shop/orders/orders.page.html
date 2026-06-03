@@ -1,0 +1,48 @@
+<div class="page fade-in">
+  <div class="eyebrow">● MIS PEDIDOS</div>
+  <h1 class="h-section" style="margin-top:6px;margin-bottom:24px">Historial de pedidos</h1>
+
+  @if (!loaded()) {
+    <div style="display:flex;flex-direction:column;gap:12px">
+      @for (n of skeletons; track $index) {
+        <div class="skel" style="height:130px;border-radius:var(--r-sm)"></div>
+      }
+    </div>
+  } @else if (orders().length === 0) {
+    <vb-empty-state icon="cube-outline" title="Sin pedidos todavía" hint="Cuando compres una copia aparecerá aquí.">
+      <button class="btn btn--primary" (click)="goMarketplace()">Ir al marketplace</button>
+    </vb-empty-state>
+  } @else {
+    <div style="display:flex;flex-direction:column;gap:12px">
+      @for (order of orders(); track order.id) {
+        <article class="order-card">
+          <div class="order-card__head">
+            <div class="mono" style="font-weight:700">{{ order.id | slice: 0 : 8 }}</div>
+            <span class="status-pill {{ statusClass(order.status) }}">{{ statusLabel(order.status) }}</span>
+            <span class="mono tiny order-card__date">{{ order.created_at | date: 'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="order-card__body">
+            <div class="order-card__items">
+              @for (item of order.items; track item.physical_copy_id) {
+                <div style="padding:4px 0;font-size:14px">
+                  <strong style="font-family:var(--serif);font-weight:500;font-size:16px">{{ item.movie_title ?? 'Copia' }}</strong>
+                  <span class="mono tiny" style="margin-left:8px;color:var(--text-3)">{{ item.format }} · {{ item.subtotal_cents | money }}</span>
+                </div>
+              }
+              <div class="order-card__total">{{ order.total_cents | money }}</div>
+            </div>
+
+            @if (order.pickup_code) {
+              <div class="order-card__pickup">
+                <vb-qr [value]="order.pickup_code" [size]="148"></vb-qr>
+                <div class="mono tiny" style="color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em">Código de recogida</div>
+                <div class="order-card__code">{{ order.pickup_code }}</div>
+                <div class="mono tiny" style="color:var(--text-3)">Enséñalo en la tienda con tu DNI</div>
+              </div>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>

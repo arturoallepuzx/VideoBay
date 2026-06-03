@@ -1,0 +1,68 @@
+@if (auth.user(); as user) {
+  <div class="page fade-in">
+    <div class="profile-head">
+      <div class="avatar" style="width:96px;height:96px;font-size:32px;background:linear-gradient(135deg, var(--vb-red), #4a0808);color:white">
+        @if (user.avatar_url) {
+          <img [src]="user.avatar_url" alt="" />
+        } @else {
+          {{ (user.name || '?').charAt(0) }}
+        }
+      </div>
+      <div class="profile-head__info">
+        <div class="eyebrow">● {{ user.role === 'admin' ? 'ADMINISTRADOR' : 'MIEMBRO' }}</div>
+        <h1 class="h-display" style="font-size:clamp(28px, 4vw, 48px);margin-top:8px;word-break:break-word">{{ user.name }}</h1>
+        <div class="mono tiny" style="margin-top:4px;color:var(--text-2);word-break:break-all">{{ user.email }}</div>
+      </div>
+      <div class="profile-head__actions">
+        <button class="btn" (click)="startEdit()"><ion-icon name="create-outline"></ion-icon> Editar perfil</button>
+        <button class="btn" (click)="go('/settings')"><ion-icon name="settings-outline"></ion-icon> Ajustes</button>
+      </div>
+    </div>
+
+    @if (editing()) {
+      <div style="border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:24px;margin-bottom:32px">
+        <h2 class="h-card" style="margin-bottom:16px">Editar perfil</h2>
+        <div style="display:grid;gap:16px;max-width:520px">
+          <div class="field">
+            <label class="field__label">Nombre</label>
+            <input class="field__input" [(ngModel)]="form.name" />
+          </div>
+          <div class="field">
+            <label class="field__label">Email</label>
+            <input class="field__input" type="email" [(ngModel)]="form.email" />
+          </div>
+          <div class="field">
+            <label class="field__label">URL de foto de perfil</label>
+            <input class="field__input" [(ngModel)]="form.avatar_url" placeholder="https://…" />
+          </div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn--primary" [disabled]="saving()" (click)="save()">Guardar</button>
+            <button class="btn" (click)="cancelEdit()">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:40px">
+      <button class="btn" (click)="go('/orders')"><ion-icon name="cube-outline"></ion-icon> Mis pedidos</button>
+      <button class="btn" (click)="go('/wishlist')"><ion-icon name="heart-outline"></ion-icon> Mis listas</button>
+      @if (user.role === 'admin') {
+        <button class="btn" (click)="go('/admin')"><ion-icon name="grid-outline"></ion-icon> Panel de administración</button>
+      }
+    </div>
+
+    @if (favorites().length > 0) {
+      <h2 class="h-section" style="margin-bottom:16px">Películas favoritas</h2>
+      <div class="profile-favs">
+        @for (favorite of favorites(); track favorite.movie_id) {
+          <div class="mc" role="button" tabindex="0" (click)="openMovie(favorite.movie_id)"
+            (keydown.enter)="openMovie(favorite.movie_id)">
+            <div class="mc__poster"><img [src]="favorite.poster_path | tmdbImage: 'poster'" [alt]="favorite.title" /></div>
+            <h3 class="mc__title">{{ favorite.title }}</h3>
+            <div class="mc__meta"><span>{{ favorite.release_year }}</span></div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}

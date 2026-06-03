@@ -1,0 +1,131 @@
+<div class="admin-layout fade-in">
+  <vb-admin-sidebar></vb-admin-sidebar>
+  <main class="admin-main">
+    <div class="eyebrow">● ADMIN · USUARIOS</div>
+    <h1 class="h-section" style="margin-top:6px;margin-bottom:20px">Usuarios</h1>
+
+    <div style="margin-bottom:16px">
+      <button class="btn btn--primary" (click)="toggleCreate()">
+        <ion-icon name="add"></ion-icon> Nuevo usuario
+      </button>
+    </div>
+
+    @if (showCreate()) {
+      <div class="stat-card" style="padding:24px;margin-bottom:20px">
+        <h2 class="h-card" style="margin:0 0 16px">Nuevo usuario</h2>
+        <div class="admin-form">
+          <div class="field">
+            <label class="field__label">Nombre</label>
+            <input class="field__input" [(ngModel)]="createForm.name" />
+          </div>
+          <div class="field">
+            <label class="field__label">Email</label>
+            <input type="email" class="field__input" [(ngModel)]="createForm.email" />
+          </div>
+          <div class="field">
+            <label class="field__label">Rol</label>
+            <select class="field__input" [(ngModel)]="createForm.role">
+              @for (r of roles; track r.value) { <option [value]="r.value">{{ r.label }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label">Contraseña</label>
+            <input type="password" class="field__input" [(ngModel)]="createForm.password" />
+          </div>
+          <div class="field">
+            <label class="field__label">Repetir contraseña</label>
+            <input type="password" class="field__input" [(ngModel)]="createForm.password_confirmation" />
+          </div>
+          <div class="field">
+            <label class="field__label">Avatar (URL)</label>
+            <input class="field__input" [(ngModel)]="createForm.avatar_url" placeholder="https://…" />
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn--primary" [disabled]="saving()" (click)="submitCreate()">Crear usuario</button>
+          <button class="btn" (click)="toggleCreate()">Cancelar</button>
+        </div>
+      </div>
+    }
+
+    @if (loading() && !users().length) {
+      <div class="mod-list">
+        @for (s of skeletons; track $index) { <div class="skel mod-skel"></div> }
+      </div>
+    } @else if (users().length) {
+      <div class="table-scroll">
+        <table class="table table--cards">
+          <thead>
+            <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Sesiones</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (user of users(); track user.id) {
+              <tr>
+                <td data-label="Nombre" style="font-family:var(--serif);font-size:15px">{{ user.name }}</td>
+                <td data-label="Email" class="mono tiny">{{ user.email }}</td>
+                <td data-label="Rol">
+                  <span class="status-pill {{ user.role === 'admin' ? 'status-pill--ready' : '' }}">{{ roleLabel(user.role) }}</span>
+                </td>
+                <td data-label="Sesiones" class="mono tiny">
+                  @if (user.active_sessions) {
+                    <span class="status-pill status-pill--ready">{{ user.active_sessions }} activa{{ user.active_sessions === 1 ? '' : 's' }}</span>
+                    @if (user.last_seen_at) {
+                      <div class="muted" style="margin-top:4px">visto {{ user.last_seen_at | date:'dd MMM HH:mm' }}</div>
+                    }
+                  } @else {
+                    <span class="muted">Sin sesiones</span>
+                  }
+                </td>
+                <td data-label="Acciones">
+                  <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+                    @if (confirmDeleteId() === user.id) {
+                      <button class="btn btn--danger-outline" (click)="remove(user.id)">Confirmar</button>
+                      <button class="btn" (click)="cancelDelete()">No</button>
+                    } @else {
+                      <button class="btn" (click)="startEdit(user)">Editar</button>
+                      <button class="btn" [disabled]="!user.active_sessions" (click)="forceLogout(user)">Cerrar sesiones</button>
+                      <button class="btn" style="color:var(--vb-red)" (click)="askDelete(user)">Borrar</button>
+                    }
+                  </div>
+                </td>
+              </tr>
+              @if (editingId() === user.id) {
+                <tr>
+                  <td colspan="5" style="background:var(--surface-2)">
+                    <div class="admin-form" style="padding:8px 0">
+                      <div class="field">
+                        <label class="field__label">Nombre</label>
+                        <input class="field__input" [(ngModel)]="editForm.name" />
+                      </div>
+                      <div class="field">
+                        <label class="field__label">Email</label>
+                        <input type="email" class="field__input" [(ngModel)]="editForm.email" />
+                      </div>
+                      <div class="field">
+                        <label class="field__label">Rol</label>
+                        <select class="field__input" [(ngModel)]="editForm.role">
+                          @for (r of roles; track r.value) { <option [value]="r.value">{{ r.label }}</option> }
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label class="field__label">Avatar (URL)</label>
+                        <input class="field__input" [(ngModel)]="editForm.avatar_url" />
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:8px">
+                      <button class="btn btn--primary" [disabled]="saving()" (click)="submitEdit(user.id)">Guardar</button>
+                      <button class="btn" (click)="cancelEdit()">Cancelar</button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="mono tiny muted" style="margin-top:16px">{{ users().length }} usuarios</div>
+    } @else if (!loading()) {
+      <p class="muted body">No hay usuarios.</p>
+    }
+  </main>
+</div>

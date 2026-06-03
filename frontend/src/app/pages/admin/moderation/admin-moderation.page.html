@@ -1,0 +1,131 @@
+<div class="admin-layout fade-in">
+  <vb-admin-sidebar></vb-admin-sidebar>
+  <main class="admin-main">
+    <div class="eyebrow">● ADMIN · MODERACIÓN</div>
+    <h1 class="h-section" style="margin-top:6px;margin-bottom:16px">Moderación</h1>
+
+    <div class="search-tabs">
+      <button class="search-tab" [class.is-active]="tab() === 'reviews'" (click)="setTab('reviews')">
+        Reseñas <span class="search-tab__count">{{ total() }}</span>
+      </button>
+      <button class="search-tab" [class.is-active]="tab() === 'subtitles'" (click)="setTab('subtitles')">
+        Subtítulos <span class="search-tab__count">{{ subTotal() }}</span>
+      </button>
+    </div>
+
+    @if (tab() === 'reviews') {
+      <section>
+        <p class="muted body" style="margin-bottom:20px">Reportes de reseñas pendientes. Pulsa uno para verlo y resolverlo.</p>
+
+        @if (loading() && !reports().length) {
+          <div class="mod-list">
+            @for (s of skeletons; track $index) { <div class="skel mod-skel"></div> }
+          </div>
+        } @else if (reports().length) {
+          <div class="mod-list">
+            @for (report of reports(); track report.id) {
+              <div class="mod-card">
+                <button class="mod-card__head" (click)="toggle(report.id)">
+                  <span class="status-pill">{{ reasonLabel(report.reason) }}</span>
+                  <div class="mod-card__main">
+                    <div class="tiny">Reportado por <strong>{{ report.reporter?.name ?? 'desconocido' }}</strong></div>
+                    <div class="mono tiny muted">{{ report.created_at | date:'dd MMM yyyy HH:mm' }}</div>
+                  </div>
+                  <ion-icon [name]="expandedId() === report.id ? 'chevron-down' : 'chevron-forward'" class="mod-card__chev"></ion-icon>
+                </button>
+
+                @if (expandedId() === report.id) {
+                  <div class="mod-card__body">
+                    <div class="lbl" style="margin-bottom:8px">Reseña de {{ report.review.author?.name ?? 'desconocido' }}</div>
+                    <div class="mod-card__meta">
+                      <span class="mono" style="color:var(--vb-red);font-weight:700">{{ report.review.rating }}/10</span>
+                      @if (report.review.contains_spoilers) {
+                        <span class="status-pill" style="color:#FFB347;border-color:rgba(255,179,71,0.3)">Spoilers</span>
+                      }
+                      <span class="mono tiny muted">{{ report.review.created_at | date:'dd MMM yyyy' }}</span>
+                    </div>
+                    <p class="body mod-card__text">{{ report.review.body || '(reseña sin texto)' }}</p>
+                    <div class="mod-card__actions">
+                      <button class="btn btn--danger-outline" [disabled]="resolvingId() === report.id" (click)="resolve(report.id, 'resolved')">
+                        <ion-icon name="trash-outline"></ion-icon> Eliminar reseña
+                      </button>
+                      <button class="btn" [disabled]="resolvingId() === report.id" (click)="resolve(report.id, 'dismissed')">
+                        Descartar reporte
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="mod-foot">
+            <span class="mono tiny muted">{{ total() }} reportes pendientes</span>
+            @if (page() < totalPages()) {
+              <button class="btn" [disabled]="loading()" (click)="loadMore()">Cargar más</button>
+            }
+          </div>
+        } @else {
+          <p class="muted body">No hay reportes de reseñas pendientes.</p>
+        }
+      </section>
+    } @else {
+      <section>
+        <p class="muted body" style="margin-bottom:20px">Reportes de subtítulos pendientes. Pulsa uno para verlo y resolverlo.</p>
+
+        @if (subLoading() && !subReports().length) {
+          <div class="mod-list">
+            @for (s of skeletons; track $index) { <div class="skel mod-skel"></div> }
+          </div>
+        } @else if (subReports().length) {
+          <div class="mod-list">
+            @for (report of subReports(); track report.id) {
+              <div class="mod-card">
+                <button class="mod-card__head" (click)="toggleSub(report.id)">
+                  <span class="status-pill">{{ subReasonLabel(report.reason) }}</span>
+                  @if (report.subtitle.movie.poster_path) {
+                    <img class="mod-thumb" [src]="report.subtitle.movie.poster_path | tmdbImage: 'poster'" alt="" />
+                  }
+                  <div class="mod-card__main">
+                    <div class="body" style="font-weight:600">{{ report.subtitle.movie.title ?? 'Película' }}</div>
+                    <div class="mono tiny muted">{{ langLabel(report.subtitle.language) }} · {{ report.subtitle.label }}</div>
+                  </div>
+                  <ion-icon [name]="subExpandedId() === report.id ? 'chevron-down' : 'chevron-forward'" class="mod-card__chev"></ion-icon>
+                </button>
+
+                @if (subExpandedId() === report.id) {
+                  <div class="mod-card__body">
+                    <div class="mod-card__grid">
+                      <div><div class="lbl">Idioma</div><div class="body">{{ langLabel(report.subtitle.language) }}</div></div>
+                      <div><div class="lbl">Etiqueta</div><div class="body">{{ report.subtitle.label }}</div></div>
+                      <div><div class="lbl">Origen</div><div class="body">{{ report.subtitle.source }}</div></div>
+                      <div><div class="lbl">Subido por</div><div class="body">{{ report.subtitle.uploaded_by?.name ?? '—' }}</div></div>
+                    </div>
+                    <div class="mono tiny muted" style="margin-top:12px">Reportado {{ report.created_at | date:'dd MMM yyyy HH:mm' }}</div>
+                    <div class="mod-card__actions">
+                      <button class="btn btn--danger-outline" [disabled]="subResolvingId() === report.id" (click)="resolveSub(report.id, 'resolved')">
+                        <ion-icon name="trash-outline"></ion-icon> Eliminar subtítulo
+                      </button>
+                      <button class="btn" [disabled]="subResolvingId() === report.id" (click)="resolveSub(report.id, 'dismissed')">
+                        Descartar reporte
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="mod-foot">
+            <span class="mono tiny muted">{{ subTotal() }} reportes pendientes</span>
+            @if (subPage() < subTotalPages()) {
+              <button class="btn" [disabled]="subLoading()" (click)="loadMoreSub()">Cargar más</button>
+            }
+          </div>
+        } @else {
+          <p class="muted body">No hay reportes de subtítulos pendientes.</p>
+        }
+      </section>
+    }
+  </main>
+</div>

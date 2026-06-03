@@ -1,0 +1,119 @@
+<div class="page page--wide fade-in">
+  <div class="eyebrow">● MARKETPLACE</div>
+  <h1 class="h-section" style="margin-top:6px;margin-bottom:6px">Tienda física</h1>
+  <p class="muted body" style="margin-bottom:28px;max-width:60ch">
+    Copias verificadas por VideoBay. Recogida en tienda con código de pedido. Sin envíos.
+  </p>
+
+  <div class="market-grid">
+    <aside class="filter-panel">
+      <h4>Formato</h4>
+      <div class="filter-group">
+        @for (format of formats(); track format) {
+          <label class="filter-check">
+            <input type="checkbox" [checked]="selectedFormats().has(format)" (change)="toggleFormat(format)" />
+            <span>{{ format }}</span>
+            <span class="count">{{ countByFormat(format) }}</span>
+          </label>
+        }
+      </div>
+
+      <h4>Estado</h4>
+      <div class="filter-group">
+        @for (condition of conditions(); track condition) {
+          <label class="filter-check">
+            <input type="checkbox" [checked]="selectedConditions().has(condition)" (change)="toggleCondition(condition)" />
+            <span>{{ condition }}</span>
+          </label>
+        }
+      </div>
+    </aside>
+
+    <div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+        <span class="mono tiny">@if (loaded()) { {{ filtered().length }} copias } @else { Cargando… }</span>
+        <span style="margin-left:auto;display:flex;gap:4px">
+          <button class="iconbtn" (click)="view.set('grid')" [style.borderColor]="view() === 'grid' ? 'var(--border)' : 'transparent'">
+            <ion-icon name="grid-outline"></ion-icon>
+          </button>
+          <button class="iconbtn" (click)="view.set('list')" [style.borderColor]="view() === 'list' ? 'var(--border)' : 'transparent'">
+            <ion-icon name="list-outline"></ion-icon>
+          </button>
+        </span>
+      </div>
+
+      @if (!loaded()) {
+        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:16px">
+          @for (n of skeletons; track $index) {
+            <div>
+              <div class="skel" style="aspect-ratio:4/5"></div>
+              <div class="skel" style="height:14px;margin-top:10px;width:70%"></div>
+            </div>
+          }
+        </div>
+      } @else if (filtered().length === 0) {
+        <vb-empty-state icon="cube-outline" title="Sin resultados" hint="Relaja los filtros."></vb-empty-state>
+      } @else if (view() === 'grid') {
+        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:16px">
+          @for (copy of filtered(); track copy.id) {
+            <article class="copy-card" (click)="open(copy)">
+              <div class="copy-card__cover">
+                @if (copy.cover_photo_url) {
+                  <img [src]="copy.cover_photo_url" [alt]="copy.movie_title" loading="lazy" />
+                } @else if (copy.poster_path | tmdbImage: 'poster'; as poster) {
+                  <img [src]="poster" [alt]="copy.movie_title" loading="lazy" />
+                }
+                <span class="copy-card__format copy-row__format"
+                  [class.copy-row__format--4k]="copy.format === '4K'"
+                  [class.copy-row__format--bluray]="copy.format === 'Blu-ray'">{{ copy.format }}</span>
+              </div>
+              <div class="copy-card__body">
+                <h3 class="copy-card__title">{{ copy.movie_title }}</h3>
+                <div class="copy-card__meta">
+                  @if (copy.region) {<span>Región {{ copy.region }}</span><span>·</span>}
+                  <span>{{ copy.condition }}</span>
+                </div>
+                <div class="copy-card__price-row">
+                  <span class="copy-card__price">{{ copy.price_cents | money: copy.currency }}</span>
+                  <button class="btn btn--primary" [class.btn--added]="cart.lastAdded() === copy.id"
+                    [disabled]="copy.stock_available === 0"
+                    (click)="add(copy); $event.stopPropagation()">
+                    {{ cart.lastAdded() === copy.id ? 'Añadido' : (copy.stock_available === 0 ? 'Agotada' : 'Añadir') }}
+                  </button>
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="copies-list">
+          @for (copy of filtered(); track copy.id) {
+            <div class="copy-row" style="cursor:pointer" (click)="open(copy)">
+              <span class="mono tiny">{{ copy.sku }}</span>
+              <span class="copy-row__format"
+                [class.copy-row__format--4k]="copy.format === '4K'"
+                [class.copy-row__format--bluray]="copy.format === 'Blu-ray'">{{ copy.format }}</span>
+              <div>
+                <div style="font-family:var(--serif);font-size:16px;font-weight:500">{{ copy.movie_title }}</div>
+                <div class="copy-row__cond">{{ copy.condition }}@if (copy.region) { · Región {{ copy.region }}}</div>
+              </div>
+              <span class="copy-row__stock" [class.zero]="copy.stock_available === 0" [class.low]="copy.stock_available === 1">
+                {{ copy.stock_available === 0 ? 'Agotada' : copy.stock_available + ' disp.' }}
+              </span>
+              <span class="copy-row__price">{{ copy.price_cents | money: copy.currency }}</span>
+              <button class="btn btn--primary" [class.btn--added]="cart.lastAdded() === copy.id"
+                [disabled]="copy.stock_available === 0"
+                (click)="add(copy); $event.stopPropagation()">{{ cart.lastAdded() === copy.id ? 'Añadido' : 'Añadir' }}</button>
+            </div>
+          }
+        </div>
+      }
+      @if (hasMore()) {
+        <div vbInfiniteScroll (reached)="loadMore()" style="height:1px"></div>
+      }
+      @if (loadingMore()) {
+        <div class="mono tiny" style="text-align:center;padding:24px;color:var(--text-3)">Cargando más…</div>
+      }
+    </div>
+  </div>
+</div>

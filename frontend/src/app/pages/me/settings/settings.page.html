@@ -1,0 +1,125 @@
+<div class="page page--narrow fade-in">
+  <div class="eyebrow">● AJUSTES</div>
+  <h1 class="h-section" style="margin-top:6px;margin-bottom:24px">Tus preferencias</h1>
+
+  @if (auth.user(); as user) {
+    <section style="margin-bottom:32px">
+      <h2 class="h-card" style="margin-bottom:12px">Cuenta</h2>
+      <div style="border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:24px">
+        <div style="display:flex;gap:20px;align-items:center">
+          <div class="avatar" style="width:64px;height:64px;font-size:24px;flex-shrink:0">
+            @if (user.avatar_url) {
+              <img [src]="user.avatar_url" alt="" />
+            } @else {
+              {{ (user.name || '?').charAt(0) }}
+            }
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:var(--serif);font-size:18px;word-break:break-word">{{ user.name }}</div>
+            <div class="mono tiny" style="word-break:break-all">{{ user.email }}</div>
+          </div>
+          @if (!editing()) {
+            <button class="btn" (click)="startEdit()" style="flex-shrink:0">
+              <ion-icon name="create-outline"></ion-icon> Editar
+            </button>
+          }
+        </div>
+
+        @if (editing()) {
+          <div style="display:grid;gap:16px;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+            <div class="field">
+              <label class="field__label">Nombre</label>
+              <input class="field__input" [(ngModel)]="form.name" />
+            </div>
+            <div class="field">
+              <label class="field__label">Email</label>
+              <input class="field__input" type="email" [(ngModel)]="form.email" />
+            </div>
+            <div class="field">
+              <label class="field__label">URL de foto de perfil</label>
+              <input class="field__input" [(ngModel)]="form.avatar_url" placeholder="https://…" />
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn btn--primary" [disabled]="saving()" (click)="saveProfile()">Guardar</button>
+              <button class="btn" (click)="cancelEdit()">Cancelar</button>
+            </div>
+
+            <div style="margin-top:8px;padding-top:20px;border-top:1px solid var(--border)">
+              <div class="field__label" style="margin-bottom:12px">Cambiar contraseña</div>
+              <div style="display:grid;gap:12px">
+                <input class="field__input" type="password" [(ngModel)]="pwForm.current"
+                  placeholder="Contraseña actual" autocomplete="current-password" />
+                <input class="field__input" type="password" [(ngModel)]="pwForm.next"
+                  placeholder="Nueva contraseña (mín. 8)" autocomplete="new-password" />
+                <input class="field__input" type="password" [(ngModel)]="pwForm.confirm"
+                  placeholder="Repite la nueva contraseña" autocomplete="new-password" />
+                <button class="btn" [disabled]="changingPassword()" (click)="changePassword()"
+                  style="justify-self:start">Cambiar contraseña</button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <section style="margin-bottom:32px">
+    <h2 class="h-card" style="margin-bottom:12px">Tema</h2>
+    <div style="border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:20px">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <button class="btn" [class.btn--primary]="theme.theme() === 'dark'" (click)="setTheme('dark')"
+          style="flex-direction:column;padding:18px 10px;gap:8px;height:auto">
+          <ion-icon name="moon-outline" style="font-size:20px"></ion-icon><span>Oscuro</span>
+        </button>
+        <button class="btn" [class.btn--primary]="theme.theme() === 'light'" (click)="setTheme('light')"
+          style="flex-direction:column;padding:18px 10px;gap:8px;height:auto">
+          <ion-icon name="sunny-outline" style="font-size:20px"></ion-icon><span>Claro</span>
+        </button>
+        <button class="btn" [class.btn--primary]="theme.theme() === 'system'" (click)="setTheme('system')"
+          style="flex-direction:column;padding:18px 10px;gap:8px;height:auto">
+          <ion-icon name="settings-outline" style="font-size:20px"></ion-icon><span>Sistema</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section style="margin-bottom:32px">
+    <h2 class="h-card" style="margin-bottom:12px">Subtítulos</h2>
+    <div style="border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:20px">
+      <div class="sub-preview"
+        [class.sub-preview--sm]="theme.subtitleSize() === 'sm'"
+        [class.sub-preview--lg]="theme.subtitleSize() === 'lg'">
+        <span class="sub-preview__cue" [class.sub-preview__cue--bg]="theme.subtitleBackground()">
+          Así se verán los subtítulos
+        </span>
+      </div>
+      <div class="field">
+        <label class="field__label">Tamaño</label>
+        <div class="player__seg" style="border-color:var(--border)">
+          <button [class.is-active]="theme.subtitleSize() === 'sm'" (click)="setSubSize('sm')">A-</button>
+          <button [class.is-active]="theme.subtitleSize() === 'md'" (click)="setSubSize('md')">A</button>
+          <button [class.is-active]="theme.subtitleSize() === 'lg'" (click)="setSubSize('lg')">A+</button>
+        </div>
+      </div>
+      <label class="filter-check" style="padding:10px 0">
+        <input #sbg type="checkbox" [checked]="theme.subtitleBackground()" (change)="setSubBg(sbg.checked)" />
+        <span>Fondo oscuro detrás del texto</span>
+      </label>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="h-card" style="margin-bottom:12px">Sesión</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" (click)="logout()">Cerrar sesión</button>
+      <button class="btn" (click)="logoutEverywhere()">Cerrar sesión en todos los dispositivos</button>
+      <button class="btn" style="color:var(--vb-red);border-color:var(--vb-red)" (click)="confirmDeleteOpen.set(true)">Eliminar cuenta</button>
+    </div>
+  </section>
+
+  <vb-confirm-dialog [open]="confirmDeleteOpen()" [danger]="true"
+    title="Eliminar cuenta"
+    message="Esta acción es permanente y no se puede deshacer. Se borrarán tus datos, listas y pedidos."
+    confirmLabel="Eliminar cuenta" cancelLabel="Cancelar"
+    (confirm)="confirmDelete()" (cancel)="confirmDeleteOpen.set(false)" />
+</div>

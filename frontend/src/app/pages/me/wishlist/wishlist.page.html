@@ -1,0 +1,44 @@
+<div class="page fade-in">
+  <div class="eyebrow">● MIS LISTAS</div>
+  <h1 class="h-section" style="margin-top:6px;margin-bottom:20px">Tus listas</h1>
+
+  <div style="display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--border)">
+    <button (click)="setTab('wishlist')"
+      [style.color]="tab() === 'wishlist' ? 'var(--text)' : 'var(--text-2)'"
+      [style.borderBottom]="tab() === 'wishlist' ? '2px solid var(--vb-red)' : '2px solid transparent'"
+      style="background:transparent;border:0;padding:12px 18px;font-weight:600;font-family:var(--mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase">
+      ♡ Wishlist · {{ wishlistItems().length }}
+    </button>
+    <button (click)="setTab('later')"
+      [style.color]="tab() === 'later' ? 'var(--text)' : 'var(--text-2)'"
+      [style.borderBottom]="tab() === 'later' ? '2px solid var(--vb-red)' : '2px solid transparent'"
+      style="background:transparent;border:0;padding:12px 18px;font-weight:600;font-family:var(--mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase">
+      ⊠ Ver más tarde · {{ laterItems().length }}
+    </button>
+  </div>
+
+  @if (!loaded()) {
+    <div class="movie-grid">
+      @for (n of skeletons; track $index) {
+        <div>
+          <div class="skel" style="aspect-ratio:2/3"></div>
+          <div class="skel" style="height:13px;margin-top:8px;width:70%"></div>
+        </div>
+      }
+    </div>
+  } @else if (items().length === 0) {
+    <vb-empty-state [icon]="tab() === 'wishlist' ? 'heart-outline' : 'bookmark-outline'"
+      [title]="tab() === 'wishlist' ? 'Tu wishlist está vacía' : 'No has guardado nada para ver más tarde'"
+      hint="Pulsa el corazón o el marcador en cualquier ficha de película.">
+      <button class="btn btn--primary" (click)="goHome()">Explorar catálogo</button>
+    </vb-empty-state>
+  } @else {
+    <div class="movie-grid">
+      @for (item of items(); track item.movie_id) {
+        <vb-movie-card [movie]="toCard(item)"
+          [wished]="wishlist.isWished(item.movie_id)" [bookmarked]="wishlist.isWatchLater(item.movie_id)"
+          (open)="openMovie(item.movie_id)" (wish)="onWish(item)" (watchLater)="onLater(item)"></vb-movie-card>
+      }
+    </div>
+  }
+</div>

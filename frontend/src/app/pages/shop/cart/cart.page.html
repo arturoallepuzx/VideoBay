@@ -1,0 +1,61 @@
+<div class="page fade-in">
+  <div class="eyebrow">● CARRITO</div>
+  <h1 class="h-section" style="margin-top:6px;margin-bottom:24px">Tu carrito</h1>
+
+  @if (cart() && cart()!.items.length > 0) {
+    <div class="cart-grid">
+      <div>
+        @for (item of cart()!.items; track item.physical_copy_id) {
+          <article class="cart-item">
+            <div class="cart-item__poster" style="display:flex;align-items:center;justify-content:center;color:var(--text-3);overflow:hidden">
+              @if (item.poster_path | tmdbImage: 'poster'; as poster) {
+                <img [src]="poster" [alt]="item.movie_title" style="width:100%;height:100%;object-fit:cover" />
+              } @else {
+                <ion-icon name="cube-outline" style="font-size:28px"></ion-icon>
+              }
+            </div>
+            <div>
+              <h3 class="cart-item__title">{{ item.movie_title ?? 'Copia' }}</h3>
+              <div class="cart-item__meta">
+                {{ item.format }}@if (item.condition) { · {{ item.condition }}}
+                @if (!item.available) { · <span style="color:var(--vb-red)">No disponible</span> }
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+                <button class="iconbtn" [disabled]="item.quantity <= 1"
+                  (click)="setQuantity(item.physical_copy_id, item.quantity - 1)"><ion-icon name="remove"></ion-icon></button>
+                <span class="mono">{{ item.quantity }}</span>
+                <button class="iconbtn" (click)="setQuantity(item.physical_copy_id, item.quantity + 1)"><ion-icon name="add"></ion-icon></button>
+              </div>
+            </div>
+            <div class="cart-item__price">{{ item.subtotal_cents | money }}</div>
+            <button class="cart-item__remove" (click)="remove(item.physical_copy_id)" aria-label="Quitar">
+              <ion-icon name="trash-outline"></ion-icon>
+            </button>
+          </article>
+        }
+      </div>
+
+      <aside class="cart-summary">
+        <h3>Resumen</h3>
+        <div class="cart-summary__row"><span>Subtotal</span><span class="mono">{{ cart()!.total_cents | money }}</span></div>
+        <div class="cart-summary__row"><span>Envío</span><span class="mono" style="color:var(--text-3)">—</span></div>
+        <div class="cart-summary__notice">
+          <ion-icon name="information-circle-outline"></ion-icon>
+          <div>Solo recogida en tienda. No hay envíos. Te daremos un código tras el pago.</div>
+        </div>
+        @if (cart()!.has_unavailable_items) {
+          <div class="tiny" style="color:var(--vb-red);margin:8px 0">Hay copias no disponibles; revísalas antes de pagar.</div>
+        }
+        <div class="cart-summary__row total"><span>Total</span><span>{{ cart()!.total_cents | money }}</span></div>
+        <button class="btn btn--primary btn--block btn--lg" style="margin-top:16px" (click)="goCheckout()">
+          Pagar con Stripe <ion-icon name="arrow-forward"></ion-icon>
+        </button>
+        <p class="tiny" style="margin-top:12px;text-align:center;color:var(--text-3)">Pago seguro · Stripe Checkout</p>
+      </aside>
+    </div>
+  } @else {
+    <vb-empty-state icon="bag-outline" title="Carrito vacío" hint="Añade copias desde la tienda o las fichas de película.">
+      <button class="btn btn--primary" (click)="goMarketplace()">Ir al marketplace</button>
+    </vb-empty-state>
+  }
+</div>

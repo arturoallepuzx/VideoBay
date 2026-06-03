@@ -1,0 +1,49 @@
+<div class="page page--narrow fade-in">
+  <div class="eyebrow">● VENDER A LA TIENDA</div>
+  <h1 class="h-section" style="margin-top:6px;margin-bottom:8px">Propón una copia para que la compremos</h1>
+  <p class="muted body" style="margin-bottom:24px">
+    Te haremos una oferta tras evaluar el estado en tienda. Trae tu copia con DNI a la tienda.
+  </p>
+
+  <div style="border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:24px">
+    <div class="field">
+      <label class="field__label">Título de la película</label>
+      <input class="field__input" [(ngModel)]="title" placeholder="Goodfellas..." />
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="field">
+        <label class="field__label">Formato</label>
+        <select class="field__select" [(ngModel)]="format">
+          @for (option of formats; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label class="field__label">Estado</label>
+        <select class="field__select" [(ngModel)]="condition">
+          @for (option of conditions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field__label">Código de barras (opcional)</label>
+      <input class="field__input" [(ngModel)]="barcode" placeholder="EAN..." />
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <label class="field__label">Notas / detalles (opcional)</label>
+      <textarea class="field__textarea" [(ngModel)]="notes" placeholder="Slipcover en buen estado, disco impecable..."></textarea>
+    </div>
+  </div>
+
+  <div class="cart-summary__notice" style="margin:16px 0">
+    <ion-icon name="information-circle-outline"></ion-icon>
+    <div>Esto es una <strong>propuesta</strong>. Validaremos el estado y te enviaremos una oferta por email en 24-48 h.</div>
+  </div>
+
+  <button class="btn btn--primary btn--lg" [disabled]="submitting()" (click)="submit()">
+    {{ submitting() ? 'Enviando…' : 'Enviar propuesta' }} <ion-icon name="checkmark"></ion-icon>
+  </button>
+</div>

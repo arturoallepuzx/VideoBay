@@ -1,0 +1,143 @@
+<div class="admin-layout fade-in">
+  <vb-admin-sidebar></vb-admin-sidebar>
+  <main class="admin-main">
+    <div class="eyebrow">● ADMIN · INVENTARIO</div>
+    <h1 class="h-section" style="margin-top:6px;margin-bottom:20px">Copias físicas</h1>
+
+    <div style="margin-bottom:16px">
+      <button class="btn btn--primary" (click)="toggleCreate()">
+        <ion-icon name="add"></ion-icon> Nueva copia
+      </button>
+    </div>
+
+    @if (showCreate()) {
+      <div class="stat-card" style="padding:24px;margin-bottom:20px">
+        <h2 class="h-card" style="margin:0 0 16px">Nueva copia</h2>
+        <div class="admin-form">
+          <div class="field" style="grid-column:1/-1">
+            <label class="field__label">Película</label>
+            <vb-movie-picker (selected)="onMoviePicked($event)"></vb-movie-picker>
+            <div style="margin-top:10px">
+              <vb-barcode-scanner (scanned)="onBarcodeScanned($event)"></vb-barcode-scanner>
+            </div>
+            @if (resolvingMovie()) {
+              <div class="mono tiny muted" style="margin-top:8px">Resolviendo…</div>
+            } @else if (createForm.movie_id) {
+              <div class="mono tiny muted" style="margin-top:8px">Seleccionada: {{ pickedTitle() }}</div>
+            }
+          </div>
+          <div class="field">
+            <label class="field__label">SKU</label>
+            <input class="field__input" [(ngModel)]="createForm.sku" />
+          </div>
+          <div class="field">
+            <label class="field__label">Formato</label>
+            <select class="field__input" [(ngModel)]="createForm.format">
+              @for (f of formats; track f) { <option [value]="f">{{ formatLabel(f) }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label">Estado</label>
+            <select class="field__input" [(ngModel)]="createForm.condition">
+              @for (c of conditions; track c.value) { <option [value]="c.value">{{ c.label }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label">Código de barras</label>
+            <input class="field__input" [(ngModel)]="createForm.barcode" placeholder="8412345678901" />
+          </div>
+          <div class="field">
+            <label class="field__label">Región</label>
+            <input class="field__input" [(ngModel)]="createForm.region" placeholder="2" />
+          </div>
+          <div class="field">
+            <label class="field__label">Precio (€)</label>
+            <input type="number" class="field__input" [(ngModel)]="createForm.price_euros" />
+          </div>
+          <div class="field">
+            <label class="field__label">Stock</label>
+            <input type="number" class="field__input" [(ngModel)]="createForm.stock_available" />
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label class="field__label">Foto de portada (URL)</label>
+            <input class="field__input" [(ngModel)]="createForm.cover_photo_url" placeholder="https://…" />
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn--primary" [disabled]="saving()" (click)="submitCreate()">Guardar copia</button>
+          <button class="btn" (click)="toggleCreate()">Cancelar</button>
+        </div>
+      </div>
+    }
+
+    @if (loading() && !copies().length) {
+      <div class="mod-list">
+        @for (s of skeletons; track $index) { <div class="skel mod-skel"></div> }
+      </div>
+    } @else if (copies().length) {
+      <div class="table-scroll">
+        <table class="table table--cards">
+          <thead>
+            <tr><th>SKU</th><th>Película</th><th>Formato</th><th>Estado</th><th>Stock</th><th>Precio</th><th>Barcode</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (copy of copies(); track copy.id) {
+              <tr>
+                <td data-label="SKU" class="mono tiny">{{ copy.sku }}</td>
+                <td data-label="Película" style="font-family:var(--serif);font-size:15px">{{ copy.movie_title }}</td>
+                <td data-label="Formato">{{ formatLabel(copy.format) }}</td>
+                <td data-label="Estado" class="mono tiny">{{ conditionLabel(copy.condition) }}</td>
+                <td data-label="Stock" class="mono">{{ copy.stock_available }}</td>
+                <td data-label="Precio" class="mono">{{ copy.price_cents | money }}</td>
+                <td data-label="Barcode" class="mono tiny">{{ copy.barcode ?? '—' }}</td>
+                <td data-label="Acciones"><button class="btn" (click)="startEdit(copy)">Editar</button></td>
+              </tr>
+              @if (editingId() === copy.id) {
+                <tr>
+                  <td colspan="8" style="background:var(--surface-2)">
+                    <div class="admin-form" style="padding:8px 0">
+                      <div class="field">
+                        <label class="field__label">Estado</label>
+                        <select class="field__input" [(ngModel)]="editForm.condition">
+                          @for (c of conditions; track c.value) { <option [value]="c.value">{{ c.label }}</option> }
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label class="field__label">Precio (€)</label>
+                        <input type="number" class="field__input" [(ngModel)]="editForm.price_euros" />
+                      </div>
+                      <div class="field">
+                        <label class="field__label">Código de barras</label>
+                        <input class="field__input" [(ngModel)]="editForm.barcode" />
+                      </div>
+                      <div class="field">
+                        <label class="field__label">Activa</label>
+                        <select class="field__input" [(ngModel)]="editForm.active">
+                          <option [ngValue]="true">Sí</option>
+                          <option [ngValue]="false">No</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:8px">
+                      <button class="btn btn--primary" [disabled]="saving()" (click)="submitEdit()">Guardar</button>
+                      <button class="btn" (click)="cancelEdit()">Cancelar</button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+        <span class="mono tiny muted">{{ total() }} copias</span>
+        @if (page() < totalPages()) {
+          <button class="btn" [disabled]="loading()" (click)="loadMore()">Cargar más</button>
+        }
+      </div>
+    } @else if (!loading()) {
+      <p class="muted body">No hay copias en el inventario.</p>
+    }
+  </main>
+</div>

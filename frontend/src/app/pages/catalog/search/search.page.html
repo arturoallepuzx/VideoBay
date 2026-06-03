@@ -1,0 +1,82 @@
+<div class="page fade-in">
+  <div class="eyebrow">● BUSCAR EN EL CATÁLOGO</div>
+  <h1 class="h-section" style="margin-top:6px;margin-bottom:20px">
+    @if (query) {
+      Resultados para <em style="font-style:italic;color:var(--vb-red)">"{{ query }}"</em>
+    } @else {
+      Explorar el catálogo
+    }
+  </h1>
+
+  <div class="search search--page" style="margin-bottom:24px">
+    <span class="search__icon"><ion-icon name="search-outline"></ion-icon></span>
+    <input #searchInput class="search__input" [ngModel]="query" (ngModelChange)="onInput($event)"
+      placeholder="Buscar películas, directores, intérpretes..." aria-label="Buscar" />
+  </div>
+
+  @if (searching()) {
+    <div class="movie-grid">
+      @for (n of skeletons; track $index) {
+        <div>
+          <div class="skel" style="aspect-ratio:2/3"></div>
+          <div class="skel" style="height:13px;margin-top:8px;width:70%"></div>
+        </div>
+      }
+    </div>
+  } @else if (searched()) {
+    @if (movies().length === 0 && people().length === 0) {
+      <vb-empty-state icon="search-outline" title="Nada por aquí" hint="Prueba con otro término."></vb-empty-state>
+    } @else {
+      <div class="search-tabs">
+        <button class="search-tab" [class.is-active]="tab() === 'movies'" (click)="setTab('movies')">
+          Películas <span class="search-tab__count">{{ movies().length }}</span>
+        </button>
+        <button class="search-tab" [class.is-active]="tab() === 'people'" (click)="setTab('people')">
+          Gente <span class="search-tab__count">{{ people().length }}</span>
+        </button>
+      </div>
+
+      @if (tab() === 'movies') {
+        @if (movies().length) {
+          <div class="movie-grid">
+            @for (movie of movies(); track movie.movie_id) {
+              <vb-movie-card [movie]="movie" [wished]="wishlist.isWishedTmdb(movie.movie_id)"
+                [bookmarked]="wishlist.isWatchLaterTmdb(movie.movie_id)" (open)="openMovie(movie.movie_id)"
+                (wish)="saveWish(movie)" (watchLater)="saveLater(movie)"></vb-movie-card>
+            }
+          </div>
+          @if (hasMore()) {
+            <div vbInfiniteScroll (reached)="loadMore()" style="height:1px"></div>
+          }
+          @if (loadingMore()) {
+            <div class="mono tiny" style="text-align:center;padding:24px;color:var(--text-3)">Cargando más…</div>
+          }
+        } @else {
+          <vb-empty-state icon="film-outline" title="Sin películas" hint="No hay resultados de películas."></vb-empty-state>
+        }
+      } @else {
+        @if (people().length) {
+          <div class="people-grid">
+            @for (person of people(); track person.tmdb_id) {
+              <button class="person-chip" (click)="openPerson(person.tmdb_id)">
+                <div class="person-chip__photo">
+                  @if (person.profile_path) {
+                    <img [src]="person.profile_path | tmdbImage: 'profile'" alt="" />
+                  } @else {
+                    <ion-icon name="person-outline"></ion-icon>
+                  }
+                </div>
+                <div>
+                  <div class="person-chip__name">{{ person.name }}</div>
+                  <div class="mono tiny" style="color:var(--text-3)">{{ person.known_for_department || 'Intérprete' }}</div>
+                </div>
+              </button>
+            }
+          </div>
+        } @else {
+          <vb-empty-state icon="person-outline" title="Sin gente" hint="No hay directores ni intérpretes."></vb-empty-state>
+        }
+      }
+    }
+  }
+</div>

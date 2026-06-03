@@ -1,0 +1,50 @@
+<div class="auth-page fade-in">
+  <div class="auth-page__art">
+    <div class="auth-page__art-collage" aria-hidden="true">
+      @for (poster of artPosters; track poster) {
+        <img [src]="poster | tmdbImage: 'poster'" alt="" />
+      }
+    </div>
+    <div class="auth-page__art-content" style="position:relative;z-index:2">
+      <div style="margin-bottom:24px"><vb-logo [size]="34"></vb-logo></div>
+      <div class="eyebrow eyebrow--red" style="margin-bottom:12px">● UN MUNDO DE CINE FÍSICO</div>
+      <h2 class="h-display" style="font-size:clamp(28px, 3vw, 44px)">El cineclub que también es tu tienda.</h2>
+      <p class="body muted" style="margin-top:16px;max-width:40ch">
+        Streaming gratuito de nuestra colección + un marketplace de copias físicas verificadas.
+      </p>
+    </div>
+    <div class="mono tiny" style="position:relative;z-index:2;color:var(--text-3)">VideoBay · Cineclub</div>
+  </div>
+
+  <div class="auth-page__form">
+    <div class="eyebrow">● INICIAR SESIÓN</div>
+    <h1 class="h-section" style="margin-top:8px;margin-bottom:24px">Bienvenido de vuelta</h1>
+
+    <form (ngSubmit)="submit()">
+      <div class="field">
+        <label class="field__label">Email</label>
+        <input class="field__input" type="email" name="email" [(ngModel)]="email"
+          placeholder="tu@email.com" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label class="field__label">Contraseña</label>
+        <input class="field__input" type="password" name="password" [(ngModel)]="password"
+          placeholder="••••••••" autocomplete="current-password"
+          (keyup)="onKey($event)" (keydown)="onKey($event)" />
+        @if (capsLock()) {
+          <div class="tiny" style="color:var(--vb-red);margin-top:6px;display:flex;align-items:center;gap:6px">
+            <ion-icon name="information-circle-outline"></ion-icon> Bloq Mayús activado
+          </div>
+        }
+      </div>
+
+      @if (error()) {
+        <div class="tiny" style="color:var(--vb-red);margin-bottom:12px">{{ error() }}</div>
+      }
+
+      <button class="btn btn--primary btn--block btn--lg" type="submit" [disabled]="loading()">
+        {{ loading() ? 'Entrando…' : 'Entrar' }} <ion-icon name="arrow-forward"></ion-icon>
+      </button>
+    </form>
+  </div>
+</div>

@@ -1,8 +1,158 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>VideoBay</ion-title>
-  </ion-toolbar>
-</ion-header>
+<div class="fade-in">
+  <header class="hero">
+    <div class="hero__collage" aria-hidden="true">
+      @for (movie of streamable().slice(0, 12); track movie.movie_id) {
+        <img [src]="movie.poster_path | tmdbImage: 'poster'" alt="" />
+      }
+    </div>
+    <div class="hero__inner">
+      <div class="eyebrow eyebrow--red" style="margin-bottom:16px">● VIDEOBAY · CINECLUB &amp; MARKETPLACE</div>
+      <h1 class="h-display hero__title">Compra, vende y <em>redescubre</em> cine físico.</h1>
+      <p class="hero__sub">
+        Catálogo de DVD, Blu-ray, 4K y rarezas en VHS. Streaming gratuito de nuestra colección curada.
+        Sin envíos: recoges tu copia en la tienda con un código.
+      </p>
+      <div class="hero__ctas">
+        <button class="btn btn--primary btn--lg" (click)="go('/stream')">
+          <ion-icon name="play"></ion-icon> Catálogo streaming
+        </button>
+        <button class="btn btn--lg" (click)="go('/marketplace')">
+          <ion-icon name="cube-outline"></ion-icon> Catálogo de tienda
+        </button>
+        <button class="btn btn--ghost btn--lg" (click)="go('/sell')">Vender mi copia</button>
+      </div>
+    </div>
+  </header>
 
-<ion-content [fullscreen]="true">
-</ion-content>
+  @if (continueWatching().length) {
+    <section class="section">
+      <div class="section__head">
+        <div>
+          <div class="eyebrow eyebrow--red">● SEGUIR VIENDO</div>
+          <h2 class="h-section" style="margin-top:6px">Continúa donde lo dejaste</h2>
+        </div>
+        <button class="btn btn--ghost" (click)="go('/stream')">Ver catálogo <ion-icon name="arrow-forward"></ion-icon></button>
+      </div>
+      <div class="section__body">
+        <div class="cw-row">
+          @for (card of continueWatching(); track card.uuid) {
+            <article class="cw-card" (click)="resume(card.uuid)">
+              <div class="cw-card__poster">
+                @if (card.poster_path) {
+                  <img [src]="card.poster_path | tmdbImage: 'poster'" [alt]="card.title" loading="lazy" />
+                }
+                <div class="cw-card__play"><ion-icon name="play-circle"></ion-icon></div>
+                <div class="cw-card__bar"><span [style.width.%]="card.progressPct"></span></div>
+              </div>
+              <div class="cw-card__title">{{ card.title }}</div>
+            </article>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <section class="section">
+    <div class="section__body">
+      <div class="zones">
+        <button class="zone zone--stream" (click)="go('/stream')">
+          <div class="zone__head">
+            <span class="zone__dot"></span>
+            <div class="eyebrow eyebrow--red">● ZONA STREAMING</div>
+          </div>
+          <h2 class="zone__title">Para ver ahora</h2>
+          <p class="zone__sub">
+            Películas disponibles en streaming gratuito. Subtítulos verificados y reproductor propio.
+          </p>
+          <div class="zone__posters">
+            @for (movie of streamable().slice(0, 5); track movie.movie_id) {
+              <img [src]="movie.poster_path | tmdbImage: 'poster'" alt="" />
+            }
+          </div>
+          <span class="zone__cta">Explorar streaming <ion-icon name="arrow-forward"></ion-icon></span>
+        </button>
+
+        <button class="zone zone--shop" (click)="go('/marketplace')">
+          <div class="zone__head">
+            <span class="zone__dot zone__dot--shop"></span>
+            <div class="eyebrow">● ZONA TIENDA FÍSICA</div>
+          </div>
+          <h2 class="zone__title">Para comprar y coleccionar</h2>
+          <p class="zone__sub">
+            DVD, Blu-ray, 4K y VHS con foto real, condición indicada y recogida en tienda.
+          </p>
+          <div class="zone__posters">
+            @for (movie of purchasable().slice(0, 5); track movie.movie_id) {
+              <img [src]="movie.poster_path | tmdbImage: 'poster'" alt="" />
+            }
+          </div>
+          <span class="zone__cta">Explorar tienda <ion-icon name="arrow-forward"></ion-icon></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  @if (!loaded()) {
+    <section class="section">
+      <div class="section__head">
+        <div>
+          <div class="eyebrow">● EN STREAMING</div>
+          <h2 class="h-section" style="margin-top:6px">Cargando catálogo…</h2>
+        </div>
+      </div>
+      <div class="section__body">
+        <div class="movie-grid">
+          @for (n of skeletons; track $index) {
+            <div>
+              <div class="skel" style="aspect-ratio:2/3"></div>
+              <div class="skel" style="height:13px;margin-top:8px;width:70%"></div>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  @if (streamable().length > 0) {
+    <section class="section">
+      <div class="section__head">
+        <div>
+          <div class="eyebrow">● EN STREAMING</div>
+          <h2 class="h-section" style="margin-top:6px">Para ver ahora</h2>
+        </div>
+        <button class="btn btn--ghost" (click)="go('/stream')">Ver todo <ion-icon name="arrow-forward"></ion-icon></button>
+      </div>
+      <div class="section__body">
+        <div class="movie-grid">
+          @for (movie of streamable(); track movie.movie_id) {
+            <vb-movie-card [movie]="movie" [streamable]="true" [wished]="wishlist.isWished(movie.movie_id)"
+              [bookmarked]="wishlist.isWatchLater(movie.movie_id)"
+              (open)="openMovie(movie.movie_id)" (wish)="toggleWish(movie)" (watchLater)="toggleLater(movie)"></vb-movie-card>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  @if (purchasable().length > 0) {
+    <section class="section" style="border-bottom:0">
+      <div class="section__head">
+        <div>
+          <div class="eyebrow">● RECIÉN LLEGADAS A LA TIENDA</div>
+          <h2 class="h-section" style="margin-top:6px">Copias físicas verificadas</h2>
+        </div>
+        <button class="btn btn--ghost" (click)="go('/marketplace')">Ir a la tienda <ion-icon name="arrow-forward"></ion-icon></button>
+      </div>
+      <div class="section__body">
+        <div class="movie-grid">
+          @for (movie of purchasable(); track movie.movie_id) {
+            <vb-movie-card [movie]="movie" [purchasable]="true" [wished]="wishlist.isWished(movie.movie_id)"
+              [bookmarked]="wishlist.isWatchLater(movie.movie_id)"
+              (open)="openMovie(movie.movie_id)" (wish)="toggleWish(movie)" (watchLater)="toggleLater(movie)"
+              (addToCart)="goToCopy(movie)"></vb-movie-card>
+          }
+        </div>
+      </div>
+    </section>
+  }
+</div>

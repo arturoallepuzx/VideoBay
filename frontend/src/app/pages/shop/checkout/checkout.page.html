@@ -1,0 +1,50 @@
+<div class="page page--narrow fade-in">
+  <div class="eyebrow">● CHECKOUT</div>
+  <h1 class="h-section" style="margin-top:6px;margin-bottom:24px">Confirmar y pagar</h1>
+
+  <section style="border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:24px;margin-bottom:16px">
+    <h3 class="h-card" style="margin-bottom:14px">Recogida en tienda</h3>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:flex-start">
+      <div style="width:80px;height:80px;background:var(--vb-red-soft);border:1px solid var(--vb-red);border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;color:var(--vb-red)">
+        <ion-icon name="cube-outline" style="font-size:28px"></ion-icon>
+      </div>
+      <div>
+        <div style="font-family:var(--serif);font-size:18px;margin-bottom:4px">VideoBay · Recogida en tienda</div>
+        <div class="muted body" style="font-size:14px">L–S 11:00–21:00 · Dom 12:00–18:00</div>
+        <div class="mono tiny" style="margin-top:8px;color:var(--text-3)">Plazo: hasta 14 días desde el pago para retirar tu pedido.</div>
+      </div>
+    </div>
+  </section>
+
+  @if (cart() && cart()!.items.length > 0) {
+    <section style="border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:24px;margin-bottom:24px">
+      <h3 class="h-card" style="margin-bottom:14px">Pedido ({{ cart()!.items.length }} {{ cart()!.items.length === 1 ? 'item' : 'items' }})</h3>
+      @for (item of cart()!.items; track item.physical_copy_id) {
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px">
+          <span>{{ item.movie_title ?? 'Copia' }} <span class="mono tiny" style="color:var(--text-3)">· {{ item.format }} ×{{ item.quantity }}</span></span>
+          <span class="mono">{{ item.subtotal_cents | money }}</span>
+        </div>
+      }
+      <div style="display:flex;justify-content:space-between;padding-top:14px;margin-top:8px;font-family:var(--serif);font-size:24px;font-weight:500">
+        <span>Total</span><span>{{ cart()!.total_cents | money }}</span>
+      </div>
+    </section>
+
+    <label class="filter-check" style="margin-bottom:16px">
+      <input type="checkbox" [(ngModel)]="agree" />
+      <span style="font-size:13px">Acepto los términos y entiendo que el pedido solo puede recogerse en tienda.</span>
+    </label>
+
+    <button class="btn btn--primary btn--block btn--lg" [disabled]="!agree || loading()" (click)="pay()">
+      {{ loading() ? 'Redirigiendo…' : 'Pagar ' + (cart()!.total_cents | money) + ' con Stripe' }}
+      <ion-icon name="arrow-forward"></ion-icon>
+    </button>
+    <p class="tiny" style="margin-top:12px;text-align:center;color:var(--text-3)">
+      Serás redirigido a Stripe Checkout. Tras el pago volverás a VideoBay con tu código de recogida.
+    </p>
+  } @else {
+    <vb-empty-state icon="bag-outline" title="Carrito vacío" hint="Añade copias antes de pagar.">
+      <button class="btn btn--primary" (click)="goMarketplace()">Ir al marketplace</button>
+    </vb-empty-state>
+  }
+</div>

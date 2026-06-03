@@ -1,0 +1,136 @@
+<div class="admin-layout fade-in">
+  <vb-admin-sidebar></vb-admin-sidebar>
+  <main class="admin-main">
+    <div class="eyebrow">● ADMIN · STREAMING</div>
+    <h1 class="h-section" style="margin-top:6px;margin-bottom:20px">Archivos de vídeo</h1>
+
+    <div style="margin-bottom:16px">
+      <button class="btn btn--primary" (click)="toggleAdd()"><ion-icon name="cloud-upload-outline"></ion-icon> Añadir vídeo</button>
+    </div>
+
+    @if (showAdd()) {
+      <div class="stat-card" style="padding:24px;margin-bottom:20px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="btn" [class.btn--primary]="mode === 'register'" (click)="setMode('register')">Registrar existente</button>
+          <button class="btn" [class.btn--primary]="mode === 'transcode'" (click)="setMode('transcode')">Transcodificar existente</button>
+          <button class="btn" [class.btn--primary]="mode === 'upload'" (click)="setMode('upload')">Subir archivo</button>
+        </div>
+
+        <div class="admin-form">
+          <div class="field">
+            <label class="field__label">Película</label>
+            <vb-movie-picker (selected)="onAddMoviePicked($event)"></vb-movie-picker>
+          </div>
+          @if (mode === 'upload') {
+            <div class="field">
+              <label class="field__label">Archivo (mp4, mkv, avi, mov)</label>
+              <input type="file" class="field__input" accept=".mp4,.mkv,.avi,.mov" (change)="onFile($event)" />
+            </div>
+          } @else {
+            <div class="field">
+              <label class="field__label">Archivo de origen ({{ mode === 'transcode' ? 'originals/' : 'raíz' }})</label>
+              @if (loadingSources()) {
+                <div class="mono tiny muted" style="padding:10px 0">Cargando archivos…</div>
+              } @else if (sourcesForMode().length) {
+                <select class="field__input" [(ngModel)]="sourceFilename">
+                  <option value="">— elige un archivo —</option>
+                  @for (src of sourcesForMode(); track src.filename) {
+                    <option [value]="src.filename">{{ src.filename }} · {{ sizeMb(src.size_bytes) }}</option>
+                  }
+                </select>
+              } @else {
+                <div class="mono tiny muted" style="padding:10px 0">
+                  No hay archivos en {{ mode === 'transcode' ? 'videos/originals/' : 'videos/' }}.
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn--primary" [disabled]="saving()" (click)="submitAdd()">
+            {{ mode === 'upload' ? 'Subir' : (mode === 'register' ? 'Registrar' : 'Transcodificar') }}
+          </button>
+          <button class="btn" (click)="toggleAdd()">Cancelar</button>
+        </div>
+      </div>
+    }
+
+    @if (loading() && !videos().length) {
+      <div class="mod-list">
+        @for (s of skeletons; track $index) { <div class="skel mod-skel"></div> }
+      </div>
+    } @else if (videos().length) {
+      <div class="table-scroll">
+        <table class="table table--cards">
+          <thead>
+            <tr><th>Archivo</th><th>Película</th><th>Estado</th><th>Duración</th><th>Tamaño</th><th>Creado</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (video of videos(); track video.id) {
+              <tr>
+                <td data-label="Archivo" style="font-family:var(--serif);font-size:15px">{{ video.original_filename ?? '—' }}</td>
+                <td data-label="Película">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div style="width:28px;height:42px;flex-shrink:0;border-radius:var(--r-xs);overflow:hidden;background:var(--surface-2)">
+                      @if (video.movie.poster_path) {
+                        <img style="width:100%;height:100%;object-fit:cover" [src]="video.movie.poster_path | tmdbImage: 'poster'" alt="" />
+                      }
+                    </div>
+                    <div style="min-width:0">
+                      <div style="font-family:var(--serif);font-size:14px">{{ video.movie.title ?? '—' }}</div>
+                      @if (video.movie.release_year) {
+                        <div class="mono tiny muted">{{ video.movie.release_year }}</div>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td data-label="Estado"><span class="status-pill {{ statusClass(video.processing_status) }}">{{ video.processing_status }}</span></td>
+                <td data-label="Duración" class="mono tiny">{{ durationMin(video.duration_seconds) }}</td>
+                <td data-label="Tamaño" class="mono tiny">{{ sizeMb(video.file_size_bytes) }}</td>
+                <td data-label="Creado" class="mono tiny">{{ video.created_at | date:'dd MMM HH:mm' }}</td>
+                <td data-label="Acciones">
+                  <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+                    @if (confirmDeleteId() === video.id) {
+                      <button class="btn" style="color:var(--vb-red);border-color:var(--vb-red)" (click)="remove(video.id)">Confirmar</button>
+                      <button class="btn" (click)="cancelRemove()">No</button>
+                    } @else {
+                      <button class="btn" (click)="startReassign(video)">Reasignar</button>
+                      <button class="btn" style="color:var(--vb-red)" (click)="askRemove(video)">Borrar</button>
+                    }
+                  </div>
+                </td>
+              </tr>
+              @if (reassigningId() === video.id) {
+                <tr>
+                  <td colspan="7" style="background:var(--surface-2)">
+                    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                      <div class="field" style="margin:0;flex:1;min-width:240px">
+                        <label class="field__label">Reasignar a</label>
+                        <vb-movie-picker (selected)="onReassignMoviePicked($event)"></vb-movie-picker>
+                      </div>
+                      <button class="btn btn--primary" [disabled]="saving()" (click)="submitReassign(video.id)">Guardar</button>
+                      <button class="btn" (click)="cancelReassign()">Cancelar</button>
+                    </div>
+                    @if (video.processing_error) {
+                      <div class="tiny" style="color:var(--vb-red);margin-top:8px">Error: {{ video.processing_error }}</div>
+                    }
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+        <span class="mono tiny muted">{{ total() }} vídeos</span>
+        @if (page() < totalPages()) {
+          <button class="btn" [disabled]="loading()" (click)="loadMore()">Cargar más</button>
+        }
+      </div>
+    } @else if (!loading()) {
+      <p class="muted body">No hay vídeos registrados todavía.</p>
+    }
+  </main>
+</div>

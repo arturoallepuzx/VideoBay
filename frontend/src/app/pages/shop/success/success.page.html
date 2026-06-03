@@ -1,0 +1,20 @@
+<div class="page page--narrow fade-in" style="text-align:center;padding-top:60px">
+  <div class="eyebrow eyebrow--red">● PEDIDO CONFIRMADO</div>
+  <h1 class="h-display" style="font-size:clamp(36px, 5vw, 56px);margin-top:12px;margin-bottom:12px">Gracias por tu compra.</h1>
+  <p class="muted body" style="max-width:48ch;margin:0 auto 32px">
+    Hemos reservado tus copias. En cuanto se confirme el pago verás tu <strong>código de recogida</strong> en Mis pedidos.
+    Pasa por la tienda con él y tu DNI para retirarlas.
+  </p>
+
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+    <button class="btn btn--primary" (click)="goOrders()">Ver mis pedidos</button>
+    <button class="btn" (click)="goHome()">Volver al inicio</button>
+  </div>
+
+  <div style="margin-top:48px;padding:24px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);text-align:left;display:grid;grid-template-columns:auto 1fr;gap:16px 24px">
+    <div class="detail__credit-label">Tienda</div><div>VideoBay · Recogida en tienda</div>
+    <div class="detail__credit-label">Horario</div><div>L–S 11:00–21:00 · Dom 12:00–18:00</div>
+    <div class="detail__credit-label">Plazo</div><div>14 días desde el pago</div>
+    <div class="detail__credit-label">Soporte</div><div>hola&#64;videobay.es</div>
+  </div>
+</div>

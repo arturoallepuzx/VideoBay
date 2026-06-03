@@ -1,0 +1,83 @@
+@if (notFound()) {
+  <div class="page fade-in">
+    <vb-empty-state icon="person-outline" title="Persona no encontrada" hint="No tenemos ficha para este identificador.">
+      <button class="btn btn--primary" (click)="goBack()">Volver</button>
+    </vb-empty-state>
+  </div>
+} @else if (person(); as p) {
+  <div class="fade-in">
+    <div class="person-hero">
+      <div class="person-hero__photo">
+        @if (p.profile_path) {
+          <img [src]="p.profile_path | tmdbImage: 'profile'" [alt]="p.name" />
+        } @else {
+          <div class="person-hero__placeholder"><ion-icon name="person-outline" style="font-size:64px"></ion-icon></div>
+        }
+      </div>
+      <div class="person-hero__body">
+        <button class="btn btn--ghost" (click)="goBack()" style="margin-bottom:16px">
+          <ion-icon name="chevron-back"></ion-icon> Volver
+        </button>
+        <div class="eyebrow">● FICHA DE PERSONA</div>
+        <h1 class="detail__title" style="font-size:clamp(34px,7vw,84px)">{{ p.name }}</h1>
+        @if (p.place_of_birth) {
+          <div class="detail__meta"><span>{{ p.place_of_birth }}</span></div>
+        }
+        @if (p.biography) {
+          <p class="detail__synopsis" style="max-width:640px">{{ p.biography }}</p>
+        }
+      </div>
+    </div>
+
+    @if (directorCards().length) {
+      <section class="section">
+        <div class="section__head">
+          <div>
+            <div class="eyebrow">● COMO DIRECTOR/A</div>
+            <h2 class="h-section" style="margin-top:6px">{{ directorCards().length }} películas dirigidas</h2>
+          </div>
+        </div>
+        <div class="section__body">
+          <div class="movie-grid">
+            @for (movie of directorCards(); track movie.movie_id) {
+              <vb-movie-card [movie]="movie" (open)="openMovie(movie.movie_id)"
+                (wish)="saveWish(movie)" (watchLater)="saveLater(movie)"></vb-movie-card>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    @if (castCredits().length) {
+      <section class="section" style="border-bottom:0">
+        <div class="section__head">
+          <div>
+            <div class="eyebrow">● COMO INTÉRPRETE</div>
+            <h2 class="h-section" style="margin-top:6px">{{ castCredits().length }} películas</h2>
+          </div>
+        </div>
+        <div class="section__body">
+          <div class="filmography">
+            @for (credit of castCredits(); track credit.tmdb_id) {
+              <button class="filmography__row" (click)="openMovie(credit.tmdb_id)">
+                @if (credit.poster_path) {
+                  <img [src]="credit.poster_path | tmdbImage: 'poster'" alt="" />
+                } @else {
+                  <span class="filmography__noimg"><ion-icon name="film-outline"></ion-icon></span>
+                }
+                <div class="filmography__info">
+                  <div class="filmography__title">{{ credit.title }}</div>
+                  <div class="mono tiny" style="color:var(--text-3)">{{ creditYear(credit.release_date) }}</div>
+                  @if (credit.character_name) {
+                    <div class="filmography__role">como <em>{{ credit.character_name }}</em></div>
+                  }
+                </div>
+                <ion-icon name="chevron-forward"></ion-icon>
+              </button>
+            }
+          </div>
+        </div>
+      </section>
+    }
+  </div>
+}

@@ -1,0 +1,47 @@
+<div class="page page--narrow fade-in">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;gap:16px">
+    <div>
+      <div class="eyebrow">● NOTIFICACIONES</div>
+      <h1 class="h-section" style="margin-top:6px">Tu actividad</h1>
+    </div>
+    @if (service.unread() > 0) {
+      <button class="btn" (click)="markAll()">Marcar todo como leído</button>
+    }
+  </div>
+
+  @if (service.notifications().length === 0) {
+    <vb-empty-state icon="notifications-outline" title="Sin notificaciones"
+      hint="Aquí verás avisos de pedidos, propuestas, subtítulos y más."></vb-empty-state>
+  } @else {
+    <div style="display:flex;flex-direction:column;gap:8px">
+      @for (notification of service.notifications(); track notification.uuid) {
+        <button style="display:flex;gap:14px;padding:16px;border:1px solid var(--border);border-radius:var(--r-sm);text-align:left;align-items:flex-start"
+          [style.background]="notification.read_at ? 'transparent' : 'var(--surface)'" (click)="open(notification)">
+          <span class="notiffly__thumb" [class.notiffly__thumb--round]="!!notification.metadata?.actor">
+            @if (notification.metadata?.actor; as actor) {
+              @if (actor.avatar_url) {
+                <img [src]="actor.avatar_url" alt="" />
+              } @else {
+                {{ (actor.name || '?').charAt(0) }}
+              }
+            } @else if (notification.metadata?.movie?.poster_path; as poster) {
+              <img [src]="poster | tmdbImage: 'poster'" alt="" />
+            } @else {
+              <ion-icon name="notifications-outline"></ion-icon>
+            }
+          </span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:var(--serif);font-size:16px">{{ notification.title }}</div>
+            @if (notification.body) {
+              <div class="body muted" style="font-size:14px;margin-top:2px">{{ notification.body }}</div>
+            }
+            <div class="mono tiny" style="margin-top:6px;color:var(--text-3)">{{ notification.created_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+          </div>
+          @if (!notification.read_at) {
+            <span style="width:8px;height:8px;border-radius:4px;margin-top:6px;flex-shrink:0;background:var(--vb-red)"></span>
+          }
+        </button>
+      }
+    </div>
+  }
+</div>

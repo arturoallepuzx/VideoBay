@@ -1,127 +1,42 @@
-import {environment} from '../../../environments/environment';
-import {Injectable, Injector} from '@angular/core';
-import {HttpClient, HttpErrorResponse} from '@angular/common/http';
-import {catchError, Observable, throwError} from 'rxjs';
+import { inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
-export type HttpMethod = 'get' | 'post' | 'patch' | 'put' | 'delete';
+export type QueryParams = Record<string, string | number | boolean | undefined | null>;
 
-@Injectable({
-  providedIn: 'root',
-})
 export abstract class BaseApiService {
 
-  protected apiUrl: string = environment.apiUrl;
+  protected readonly http = inject(HttpClient);
 
-  public http: HttpClient;
-
-  protected constructor(
-    protected injector: Injector
-  ) {
-    this.http = this.injector.get<HttpClient>(HttpClient);
+  protected get<T>(endpoint: string, params?: QueryParams): Observable<T> {
+    return this.http.get<T>(endpoint, { params: this.buildParams(params) });
   }
 
-
-  /**
-   * Hacer una llamada http
-   *
-   */
-  public httpCall(endpoint: string, params: any = null, method: HttpMethod): Observable<ApiResponse> {
-    return this.makeHttpCall(endpoint, params, method);
+  protected post<T>(endpoint: string, body?: unknown): Observable<T> {
+    return this.http.post<T>(endpoint, body ?? {});
   }
 
+  protected put<T>(endpoint: string, body?: unknown): Observable<T> {
+    return this.http.put<T>(endpoint, body ?? {});
+  }
 
-  /**
-   * Ejecuta una petición HTTP
-   *
-   */
-  makeHttpCall(endpoint: string, params: any = null, method: HttpMethod): Observable<ApiResponse> {
-    switch (method) {
-      case 'get':
-        return this.getHttpCall(endpoint, params);
+  protected delete<T>(endpoint: string): Observable<T> {
+    return this.http.delete<T>(endpoint);
+  }
 
-      case 'post':
-        return this.postHttpCall(endpoint, params);
+  private buildParams(params?: QueryParams): HttpParams {
+    let httpParams = new HttpParams();
 
-      case 'patch':
-        return this.patchHttpCall(endpoint, params);
-
-      case 'put':
-        return this.putHttpCall(endpoint, params);
-
-      case 'delete':
-        return this.deleteHttpCall(endpoint, params);
-
-      default:
-        console.warn(`Unknown HTTP method received: ${method}`);
-        break;
+    if (!params) {
+      return httpParams;
     }
 
-    return this.getHttpCall(endpoint, params); // Use GET request as a default callback
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        httpParams = httpParams.set(key, String(value));
+      }
+    }
+
+    return httpParams;
   }
-
-
-  /**
-   * Llamada http tipo 'post'
-   *
-   */
-  private postHttpCall(endpoint: string, params: any): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(this.apiUrl + endpoint, params)
-      .pipe(catchError((error) => this.handleError(error)));
-  }
-
-
-  /**
-   * Llamada http tipo 'put'
-   *
-   */
-  private putHttpCall(endpoint: string, params: any): Observable<ApiResponse> {
-    return this.http.put<ApiResponse>(this.apiUrl + endpoint, params)
-      .pipe(catchError((error) => this.handleError(error)));
-  }
-
-
-  /**
-   * Llamada http tipo 'patch'
-   *
-   */
-  private patchHttpCall(endpoint: string, params?: any): Observable<ApiResponse> {
-    return this.http.patch<ApiResponse>(this.apiUrl + endpoint, params)
-      .pipe(catchError((error) => this.handleError(error)));
-  }
-
-
-  /**
-   * Llamada http tipo 'delete'
-   *
-   */
-  private deleteHttpCall(endpoint: string, params?: any): Observable<ApiResponse> {
-    return this.http.delete<ApiResponse>(this.apiUrl + endpoint, {params})
-      .pipe(catchError((error) => this.handleError(error)));
-  }
-
-
-  /**
-   * Llamada http tipo 'get'
-   *
-   */
-  private getHttpCall(endpoint: string, params?: any): Observable<ApiResponse> {
-    return this.http.get<ApiResponse>(this.apiUrl + endpoint, {params})
-      .pipe(catchError((error) => this.handleError(error)));
-  }
-
-
-  /**
-   * Manejar errores HTTP
-   *
-   */
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    return throwError(() => new Error(error.message));
-  }
-
-}
-
-export interface ApiResponse {
-  data: any;
-  status: number;
-  message: string;
 }

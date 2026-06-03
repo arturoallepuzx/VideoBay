@@ -1,0 +1,101 @@
+<div class="admin-layout fade-in">
+  <vb-admin-sidebar></vb-admin-sidebar>
+  <main class="admin-main">
+    <div class="eyebrow">● ADMIN · RECOGIDA</div>
+    <h1 class="h-section" style="margin-top:6px;margin-bottom:8px">Recoger pedido</h1>
+    <p class="muted body" style="margin-bottom:24px;max-width:560px">
+      Escanea el QR del cliente o introduce su código de recogida. Verás el pedido y podrás marcarlo como recogido.
+    </p>
+
+    <div class="pickup-grid">
+      <div>
+        <div class="scanner">
+          <video #video class="scanner__cam" style="width:100%;height:100%;object-fit:cover" [hidden]="!scanning()"></video>
+          @if (!scanning()) {
+            <div class="scanner__cam" style="display:flex;align-items:center;justify-content:center;color:var(--text-3)">
+              <ion-icon name="barcode-outline" style="font-size:48px"></ion-icon>
+            </div>
+          }
+          <div class="scanner__viewfinder">
+            <div class="scanner__corners"></div>
+            @if (scanning()) { <div class="scanner__line"></div> }
+          </div>
+          @if (scanning()) { <div class="scanner__hint">Buscando código…</div> }
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:16px">
+          @if (!scanning()) {
+            <button class="btn btn--primary" (click)="startCamera()">
+              <ion-icon name="camera-outline"></ion-icon> Escanear QR
+            </button>
+          } @else {
+            <button class="btn" (click)="stopCamera()">Detener</button>
+          }
+        </div>
+
+        <div class="field" style="margin-top:24px;margin-bottom:0">
+          <label class="field__label">O introduce el código a mano</label>
+          <div style="display:flex;gap:8px">
+            <input class="field__input" [(ngModel)]="manualCode" placeholder="A1B2C3D4E5" (keyup.enter)="submitManual()" />
+            <button class="btn btn--primary" [disabled]="loading()" (click)="submitManual()">Buscar</button>
+          </div>
+        </div>
+
+        @if (error()) {
+          <div class="tiny" style="color:var(--vb-red);margin-top:12px">{{ error() }}</div>
+        }
+      </div>
+
+      <div>
+        @if (order(); as o) {
+          <div class="stat-card" style="padding:24px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div>
+                <div class="lbl">Pedido</div>
+                <div class="mono" style="font-size:15px;margin-top:4px">{{ o.id }}</div>
+              </div>
+              <span class="status-pill {{ o.status === 'ready_for_pickup' ? 'status-pill--ready' : 'status-pill--picked' }}">
+                {{ o.status === 'ready_for_pickup' ? 'Lista' : (o.status === 'picked_up' ? 'Recogido' : o.status) }}
+              </span>
+            </div>
+
+            <div style="display:flex;gap:24px;margin-top:20px">
+              <div>
+                <div class="lbl">Código</div>
+                <div class="pickup-code" style="font-size:20px;margin-top:4px;color:var(--vb-red)">{{ o.pickup_code }}</div>
+              </div>
+              <div>
+                <div class="lbl">Total</div>
+                <div class="mono" style="font-size:20px;margin-top:4px">{{ o.total_cents | money }}</div>
+              </div>
+            </div>
+
+            <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+              <div class="lbl" style="margin-bottom:8px">Artículos ({{ units(o) }})</div>
+              @for (item of o.items; track $index) {
+                <div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0">
+                  <span style="font-family:var(--serif);font-size:15px">
+                    {{ item.movie_title }} <span class="mono tiny muted">×{{ item.quantity }}</span>
+                  </span>
+                  <span class="mono tiny muted">{{ item.format }} · {{ item.condition }}</span>
+                </div>
+              }
+            </div>
+
+            @if (o.status === 'ready_for_pickup') {
+              <button class="btn btn--primary" style="margin-top:20px;width:100%" [disabled]="marking()" (click)="confirm()">
+                <ion-icon name="checkmark"></ion-icon> Marcar como recogido
+              </button>
+            } @else if (o.status === 'picked_up') {
+              <div class="tiny muted" style="margin-top:20px">Recogido el {{ o.picked_up_at | date:'dd MMM yyyy HH:mm' }}.</div>
+            }
+          </div>
+        } @else if (loading()) {
+          <div class="muted body">Buscando pedido…</div>
+        } @else {
+          <div class="muted body">Escanea o introduce un código para ver el pedido.</div>
+        }
+      </div>
+    </div>
+  </main>
+</div>

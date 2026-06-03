@@ -1,0 +1,164 @@
+@if (notAvailable()) {
+  <div class="player" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;color:#fff">
+    <div class="mono">Este título no está disponible en streaming.</div>
+    <button class="btn btn--primary" (click)="close()">Volver</button>
+  </div>
+} @else if (movie(); as m) {
+  <div class="player" [class.is-idle]="idle()"
+    [class.subs--sm]="theme.subtitleSize() === 'sm'" [class.subs--lg]="theme.subtitleSize() === 'lg'"
+    [class.subs--bg]="theme.subtitleBackground()"
+    (mousemove)="wake()">
+    <div class="player__video" (click)="onVideoTap($event)">
+      <video #video [src]="streamUrl()" crossorigin="use-credentials" autoplay playsinline
+        style="width:100%;height:100%;object-fit:contain;background:#000"
+        (loadedmetadata)="onMeta()" (timeupdate)="onTime()"
+        (waiting)="buffering.set(true)" (seeking)="buffering.set(true)"
+        (playing)="buffering.set(false)" (canplay)="buffering.set(false)" (seeked)="buffering.set(false)"
+        (play)="playing.set(true)" (pause)="playing.set(false)" (ended)="onEnded()">
+        @for (subtitle of subtitles(); track subtitle.uuid) {
+          <track kind="subtitles" [src]="subtitleService.trackUrl(subtitle.uuid)"
+            [srclang]="subtitle.language" [label]="subtitle.label" (load)="onTrackLoad($event)" />
+        }
+      </video>
+
+      @if (buffering()) {
+        <div class="player__spinner" aria-label="Cargando"></div>
+      } @else if (!playing()) {
+        <button class="player__center-play" (click)="togglePlay(); $event.stopPropagation()" aria-label="Reproducir">
+          <ion-icon name="play" style="font-size:32px"></ion-icon>
+        </button>
+      }
+    </div>
+
+    <div class="player__top">
+      <button class="player__close" (click)="close()" aria-label="Cerrar">
+        <ion-icon name="close" style="font-size:20px"></ion-icon>
+      </button>
+      <div>
+        <div class="mono" style="font-size:11px;letter-spacing:0.16em;color:rgba(255,255,255,0.6)">VIDEOBAY · STREAM</div>
+        <h2 class="player__title">{{ m.title }}</h2>
+      </div>
+    </div>
+
+    <div class="player__bottom">
+      <div class="player__progress" (click)="seek($event)">
+        <div class="player__progress-fill" [style.width.%]="progressPct()"></div>
+      </div>
+      <div class="player__controls">
+        <button class="iconbtn" (click)="togglePlay()" [attr.aria-label]="playing() ? 'Pausa' : 'Reproducir'">
+          <ion-icon [name]="playing() ? 'pause' : 'play'" style="font-size:20px"></ion-icon>
+        </button>
+        <button class="iconbtn" (click)="skip(-10)" aria-label="Retroceder 10s">
+          <ion-icon name="play-back" style="font-size:18px"></ion-icon>
+        </button>
+        <button class="iconbtn" (click)="skip(10)" aria-label="Avanzar 10s">
+          <ion-icon name="play-forward" style="font-size:18px"></ion-icon>
+        </button>
+        <div class="player__vol">
+          <button class="iconbtn" (click)="toggleMute()" [attr.aria-label]="muted() ? 'Activar audio' : 'Silenciar'">
+            <ion-icon [name]="muted() ? 'volume-mute-outline' : 'volume-high-outline'" style="font-size:18px"></ion-icon>
+          </button>
+          <input type="range" class="player__volume" min="0" max="1" step="0.05"
+            [value]="muted() ? 0 : volume()" (input)="setVolume($event)" aria-label="Volumen" />
+        </div>
+        <span class="player__time">{{ currentTime() | duration }} <span style="opacity:0.5">/ {{ duration() | duration }}</span></span>
+        <span class="player__spacer"></span>
+        <button class="iconbtn" (click)="showSettings.set(!showSettings())"
+          [style.color]="showSettings() ? 'var(--vb-red)' : null" aria-label="Subtítulos">
+          <ion-icon name="text-outline" style="font-size:18px"></ion-icon>
+        </button>
+        <button class="iconbtn" (click)="toggleFullscreen()" aria-label="Pantalla completa">
+          <ion-icon name="expand" style="font-size:18px"></ion-icon>
+        </button>
+      </div>
+    </div>
+
+    @if (showSettings()) {
+      <div class="player__panel">
+        <div class="player__panel-section">
+          <h4>Subtítulos</h4>
+          <div class="player__opt" [class.is-active]="activeSub() === 'off'" (click)="setSubtitle('off')">
+            <span>Desactivados</span>
+          </div>
+          @for (subtitle of subtitles(); track subtitle.uuid) {
+            <div class="player__opt" [class.is-active]="activeSub() === subtitle.uuid">
+              <span class="subrow__label" style="flex:1;cursor:pointer" (click)="setSubtitle(subtitle.uuid)">{{ subtitle.label }}</span>
+              <small>{{ subtitle.source }}</small>
+              <vb-report-menu triggerClass="subflag" title="Reportar subtítulo"
+                [reasons]="subtitleReasons" (picked)="reportSubtitle(subtitle.uuid, $event)" />
+            </div>
+          }
+
+          <button type="button" class="subset__add-btn" [class.is-open]="showAddSubs()" (click)="toggleAddSubs()">
+            <ion-icon [name]="showAddSubs() ? 'remove' : 'add'"></ion-icon>
+            {{ showAddSubs() ? 'Cerrar' : 'Añadir subtítulo' }}
+          </button>
+
+          @if (showAddSubs()) {
+            <div class="subadd">
+              <div class="subset__label">Buscar online por idioma</div>
+              <div class="subchips">
+                @for (lang of langs; track lang.code) {
+                  <button type="button" class="subchip" [class.is-active]="searchLang() === lang.code"
+                    (click)="searchByLang(lang.code)">{{ lang.label }}</button>
+                }
+              </div>
+
+              @if (searchingSubs()) {
+                <div class="subadd__hint">Buscando…</div>
+              } @else if (searchLang()) {
+                @if (subCandidates().length) {
+                  <div class="subadd__list">
+                    @for (candidate of subCandidates(); track candidate.file_id) {
+                      <div class="player__opt" (click)="importSubtitle(candidate)">
+                        <span style="flex:1">{{ candidate.label }}</span>
+                        <small>{{ importingId() === candidate.file_id ? 'añadiendo…' : (candidate.download_count ? candidate.download_count + ' ↓' : '') }}</small>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="subadd__hint">Sin resultados para ese idioma.</div>
+                }
+              }
+
+              <div class="subadd__upload">
+                <label class="btn">
+                  <ion-icon name="cloud-upload-outline"></ion-icon> Subir de tu ordenador
+                  <input type="file" accept=".srt,.vtt" (change)="onSubFile($event)" hidden />
+                </label>
+                @if (subFile) {
+                  <div class="subadd__file">
+                    <span class="subadd__filename">{{ subFile.name }}</span>
+                    <input class="field__input subadd__lang" [(ngModel)]="uploadLang" placeholder="es" />
+                    <button class="btn btn--primary" [disabled]="uploadingSub()" (click)="uploadSubtitle()">Subir</button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="player__panel-section">
+          <h4>Apariencia</h4>
+          <div class="subrow">
+            <span class="subrow__label">Tamaño</span>
+            <div class="player__seg subseg">
+              <button [class.is-active]="theme.subtitleSize() === 'sm'" (click)="setSubSize('sm')">A-</button>
+              <button [class.is-active]="theme.subtitleSize() === 'md'" (click)="setSubSize('md')">A</button>
+              <button [class.is-active]="theme.subtitleSize() === 'lg'" (click)="setSubSize('lg')">A+</button>
+            </div>
+          </div>
+          <div class="subrow">
+            <span class="subrow__label">Fondo oscuro</span>
+            <button type="button" class="vb-switch" [class.is-on]="theme.subtitleBackground()" (click)="toggleSubBg()"
+              [attr.aria-pressed]="theme.subtitleBackground()" aria-label="Fondo de subtítulos"></button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="player player--loading">
+    <vb-logo [size]="46"></vb-logo>
+  </div>
+}

@@ -1,0 +1,59 @@
+<div class="fade-in">
+  <header class="zone-hero zone-hero--stream">
+    <div class="zone-hero__inner">
+      <div class="eyebrow eyebrow--red">● ZONA STREAMING · GRATIS CON VIDEOBAY</div>
+      <h1 class="h-section" style="margin-top:8px;margin-bottom:8px;font-size:clamp(28px, 4vw, 44px)">Catálogo para ver ahora</h1>
+      <p class="muted" style="max-width:680px;font-size:16px;margin:0">
+        Películas disponibles en streaming. Reproductor propio, subtítulos verificados, sin anuncios.
+      </p>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="section__head">
+      <div>
+        <div class="eyebrow">● CATÁLOGO</div>
+        <h2 class="h-section" style="margin-top:6px">Para ver ahora</h2>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end">
+        <span class="mono tiny" style="color:var(--text-3)">
+          @if (loaded()) { {{ movies().length }} títulos } @else { Cargando… }
+        </span>
+        <select class="field__select" [(ngModel)]="sort" (ngModelChange)="load()">
+          <option value="rating">Mejor valoradas</option>
+          <option value="newest">Más recientes</option>
+          <option value="title">Alfabético</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section__body">
+      @if (!loaded()) {
+        <div class="movie-grid">
+          @for (n of skeletons; track $index) {
+            <div>
+              <div class="skel" style="aspect-ratio:2/3"></div>
+              <div class="skel" style="height:13px;margin-top:8px;width:70%"></div>
+            </div>
+          }
+        </div>
+      } @else if (movies().length === 0) {
+        <vb-empty-state title="Sin películas en streaming" hint="Aún no hay títulos importados en streaming."></vb-empty-state>
+      } @else {
+        <div class="movie-grid">
+          @for (movie of movies(); track movie.movie_id) {
+            <vb-movie-card [movie]="movie" [streamable]="true" [wished]="wishlist.isWished(movie.movie_id)"
+              [bookmarked]="wishlist.isWatchLater(movie.movie_id)"
+              (open)="openMovie(movie.movie_id)" (wish)="toggleWish(movie)" (watchLater)="toggleLater(movie)"></vb-movie-card>
+          }
+        </div>
+        @if (hasMore()) {
+          <div vbInfiniteScroll (reached)="loadMore()" style="height:1px"></div>
+        }
+        @if (loadingMore()) {
+          <div class="mono tiny" style="text-align:center;padding:24px;color:var(--text-3)">Cargando más…</div>
+        }
+      }
+    </div>
+  </section>
+</div>

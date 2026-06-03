@@ -1,0 +1,89 @@
+<div class="admin-layout fade-in">
+  <vb-admin-sidebar></vb-admin-sidebar>
+  <main class="admin-main">
+    <div class="eyebrow">● ADMIN · PRECIOS</div>
+    <h1 class="h-section" style="margin-top:6px;margin-bottom:6px">Motor de precios</h1>
+    <p class="muted body" style="margin-bottom:24px;max-width:60ch">
+      Precio base por formato × multiplicador por estado = precio de venta estimado.
+      El precio de compra es ese valor por el margen de compra.
+    </p>
+
+    @if (loading()) {
+      <div class="mono tiny muted">Cargando…</div>
+    } @else {
+      <div class="stat-card" style="padding:24px;margin-bottom:20px">
+        <h2 class="h-card" style="margin:0 0 16px">Precio base por formato</h2>
+        <div class="admin-form">
+          @for (format of formatKeys(); track format) {
+            <div class="field">
+              <label class="field__label">{{ formatLabel(format) }}</label>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input class="field__input" type="number" min="0" step="0.5" [(ngModel)]="basePriceEuros[format]" />
+                <span class="mono tiny muted">€</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="stat-card" style="padding:24px;margin-bottom:20px">
+        <h2 class="h-card" style="margin:0 0 16px">Multiplicador por estado</h2>
+        <div class="admin-form">
+          @for (condition of conditionKeys(); track condition) {
+            <div class="field">
+              <label class="field__label">{{ conditionLabel(condition) }}</label>
+              <input class="field__input" type="number" min="0" step="0.05" [(ngModel)]="conditionMultipliers[condition]" />
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="stat-card" style="padding:24px;margin-bottom:20px">
+        <h2 class="h-card" style="margin:0 0 16px">Margen de compra</h2>
+        <div class="field" style="max-width:240px">
+          <label class="field__label">La tienda compra a este % del precio de venta</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input class="field__input" type="number" min="0" max="100" step="1" [(ngModel)]="buyMargin" />
+            <span class="mono tiny muted">%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card" style="padding:24px;margin-bottom:20px">
+        <h2 class="h-card" style="margin:0 0 16px">Estimación</h2>
+        <div class="admin-form">
+          <div class="field">
+            <label class="field__label">Formato</label>
+            <select class="field__input" [(ngModel)]="previewFormat">
+              @for (format of formatKeys(); track format) { <option [value]="format">{{ formatLabel(format) }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label">Estado</label>
+            <select class="field__input" [(ngModel)]="previewCondition">
+              @for (condition of conditionKeys(); track condition) { <option [value]="condition">{{ conditionLabel(condition) }}</option> }
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:32px;flex-wrap:wrap;margin-top:16px">
+          <div>
+            <div class="field__label">Precio de venta estimado</div>
+            <div style="font-family:var(--serif);font-size:28px;font-weight:500;color:var(--vb-red)">
+              {{ previewSaleCents() | money: currency() }}
+            </div>
+          </div>
+          <div>
+            <div class="field__label">Precio de compra estimado</div>
+            <div style="font-family:var(--serif);font-size:28px;font-weight:500">
+              {{ previewBuyCents() | money: currency() }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn--primary btn--lg" [disabled]="saving()" (click)="save()">
+        <ion-icon name="pricetag-outline"></ion-icon> Guardar precios
+      </button>
+    }
+  </main>
+</div>
