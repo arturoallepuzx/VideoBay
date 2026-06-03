@@ -65,6 +65,7 @@ api/.phpunit.cache/
 
 # --- Docker (datos locales de contenedores) ---
 docker/dbgate-data/
+docker-compose.override.yml
 
 # Logs y cachés genéricos
 *.log
