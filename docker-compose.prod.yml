@@ -1,0 +1,54 @@
+services:
+
+  api:
+    ports: []
+    command: php-fpm
+    volumes:
+      - /var/lib/videobay:/var/lib/videobay
+
+  worker:
+    restart: unless-stopped
+    volumes:
+      - /var/lib/videobay:/var/lib/videobay
+
+  scheduler:
+    restart: unless-stopped
+    volumes:
+      - /var/lib/videobay:/var/lib/videobay
+
+  frontend:
+    ports: []
+    volumes:
+      - ./frontend:/app
+      - frontend_dist:/app/www
+    command: bash -c "npm ci && npm run build -- --configuration=production"
+
+  db:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  dbgate:
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: videobay_caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - frontend_dist:/srv/frontend:ro
+    depends_on:
+      - api
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  frontend_dist:
+  caddy_data:
+  caddy_config:

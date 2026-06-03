@@ -6,11 +6,41 @@ services:
     working_dir: /var/www
     volumes:
       - ./backend:/var/www
+      - media_data:/var/lib/videobay
+    env_file:
+      - backend/.env
     ports:
       - "8000:8000"
     depends_on:
       - db
+      - redis
     command: php artisan serve --host=0.0.0.0 --port=8000
+
+  worker:
+    build: ./docker/php
+    container_name: videobay_worker
+    working_dir: /var/www
+    volumes:
+      - ./backend:/var/www
+      - media_data:/var/lib/videobay
+    env_file:
+      - backend/.env
+    depends_on:
+      - api
+    command: php artisan queue:work redis_transcoding --queue=transcoding --tries=1 --timeout=86400
+
+  scheduler:
+    build: ./docker/php
+    container_name: videobay_scheduler
+    working_dir: /var/www
+    volumes:
+      - ./backend:/var/www
+      - media_data:/var/lib/videobay
+    env_file:
+      - backend/.env
+    depends_on:
+      - api
+    command: php artisan schedule:work
 
   frontend:
     build: ./docker/frontend
@@ -28,16 +58,26 @@ services:
     image: mysql:8
     container_name: videobay_db
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: videobay
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: videobay_redis
+    volumes:
+      - redis_data:/data
 
   dbgate:
     image: dbgate/dbgate
     container_name: videobay_dbgate
     ports:
-      - "9051:3000"
+      - "127.0.0.1:9051:3000"
     depends_on:
       - db
     environment:
@@ -45,9 +85,14 @@ services:
       LABEL_videobay: VideoBay MySQL
       SERVER_videobay: db
       USER_videobay: root
-      PASSWORD_videobay: root
+      PASSWORD_videobay: ${MYSQL_ROOT_PASSWORD}
       PORT_videobay: "3306"
-      DATABASE_videobay: videobay
+      DATABASE_videobay: ${DB_DATABASE}
       ENGINE_videobay: mysql@dbgate-plugin-mysql
     volumes:
       - ./docker/dbgate-data:/root/.dbgate
+
+volumes:
+  mysql_data:
+  redis_data:
+  media_data:

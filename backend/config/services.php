@@ -35,4 +35,35 @@ return [
         ],
     ],
 
+    'tmdb' => [
+        'read_access_token' => env('TMDB_READ_ACCESS_TOKEN', ''),
+        'base_url' => env('TMDB_BASE_URL', 'https://api.themoviedb.org/3'),
+        'image_base_url' => env('TMDB_IMAGE_BASE_URL', 'https://image.tmdb.org/t/p'),
+        'default_language' => env('TMDB_DEFAULT_LANGUAGE', 'es-ES'),
+        'cache' => [
+            'search_ttl_seconds' => (int) env('TMDB_SEARCH_CACHE_TTL', 3600),
+            'detail_ttl_seconds' => (int) env('TMDB_DETAIL_CACHE_TTL', 86400),
+            'recommendations_ttl_seconds' => (int) env('TMDB_RECOMMENDATIONS_CACHE_TTL', 604800),
+            'person_ttl_seconds' => (int) env('TMDB_PERSON_CACHE_TTL', 86400),
+        ],
+    ],
+
+    'barcode' => [
+        'api_key' => env('BARCODE_API_KEY', ''),
+        'base_url' => env('BARCODE_BASE_URL', 'https://api.upcdatabase.org'),
+    ],
+
+    'opensubtitles' => [
+        'api_key' => env('OPENSUBTITLES_API_KEY', ''),
+        'base_url' => env('OPENSUBTITLES_BASE_URL', 'https://api.opensubtitles.com/api/v1'),
+        'user_agent' => env('OPENSUBTITLES_USER_AGENT', 'VideoBay'),
+        'username' => env('OPENSUBTITLES_USERNAME', ''),
+        'password' => env('OPENSUBTITLES_PASSWORD', ''),
+    ],
+
+    'stripe' => [
+        'secret' => env('STRIPE_SECRET', ''),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET', ''),
+    ],
+
 ];

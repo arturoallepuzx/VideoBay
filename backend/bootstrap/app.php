@@ -1,5 +1,10 @@
 <?php
 
+use App\Auth\Infrastructure\Http\Middleware\AuthenticateAccessToken;
+use App\Auth\Infrastructure\Http\Middleware\EnsureXsrfCookie;
+use App\Auth\Infrastructure\Http\Middleware\RequireRole;
+use App\Auth\Infrastructure\Http\Middleware\VerifyCsrfTokenStateless;
+use App\Exceptions\Handler;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,8 +17,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->api(prepend: [
+            EnsureXsrfCookie::class,
+            VerifyCsrfTokenStateless::class,
+        ]);
+
+        $middleware->alias([
+            'auth.access_token' => AuthenticateAccessToken::class,
+            'auth.role' => RequireRole::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        Handler::register($exceptions);
     })->create();
