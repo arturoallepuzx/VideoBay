@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\User\Application\CreateUser;
+namespace App\User\Application\UpdateMyProfile;
 
 use App\User\Domain\Entity\User;
 
-final readonly class CreateUserResponse
+final readonly class UpdateMyProfileResponse
 {
+    /** @param array<string, mixed> $accessibilitySettings */
     public function __construct(
         public string $id,
         public string $role,
@@ -15,8 +16,7 @@ final readonly class CreateUserResponse
         public string $email,
         public ?string $emailVerifiedAt,
         public ?string $avatarUrl,
-        public string $createdAt,
-        public string $updatedAt,
+        public array $accessibilitySettings,
     ) {}
 
     public static function create(User $user): self
@@ -28,8 +28,7 @@ final readonly class CreateUserResponse
             email: $user->email()->value(),
             emailVerifiedAt: $user->emailVerifiedAt()?->format(\DateTimeInterface::ATOM),
             avatarUrl: $user->avatarUrl()?->value(),
-            createdAt: $user->createdAt()->format(\DateTimeInterface::ATOM),
-            updatedAt: $user->updatedAt()->format(\DateTimeInterface::ATOM),
+            accessibilitySettings: $user->accessibilitySettings()->toArray(),
         );
     }
 
@@ -37,14 +36,15 @@ final readonly class CreateUserResponse
     public function toArray(): array
     {
         return [
-            'id' => $this->id,
-            'role' => $this->role,
-            'name' => $this->name,
-            'email' => $this->email,
-            'email_verified_at' => $this->emailVerifiedAt,
-            'avatar_url' => $this->avatarUrl,
-            'created_at' => $this->createdAt,
-            'updated_at' => $this->updatedAt,
+            'user' => [
+                'id' => $this->id,
+                'role' => $this->role,
+                'name' => $this->name,
+                'email' => $this->email,
+                'email_verified_at' => $this->emailVerifiedAt,
+                'avatar_url' => $this->avatarUrl,
+                'accessibility_settings' => $this->accessibilitySettings,
+            ],
         ];
     }
 }

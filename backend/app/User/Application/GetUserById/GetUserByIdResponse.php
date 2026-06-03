@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\User\Application\CreateUser;
+namespace App\User\Application\GetUserById;
 
 use App\User\Domain\Entity\User;
 
-final readonly class CreateUserResponse
+final readonly class GetUserByIdResponse
 {
     public function __construct(
         public string $id,

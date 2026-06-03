@@ -1,44 +1,48 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\User\Infrastructure\Persistence\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-class EloquentUser extends Authenticatable
+class EloquentUser extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'users';
-
-    protected static function newFactory(): Factory
-    {
-        return UserFactory::new();
-    }
 
     protected $fillable = [
         'uuid',
         'name',
         'email',
-        'password',
+        'email_verified_at',
+        'password_hash',
+        'avatar_url',
+        'role',
+        'accessibility_settings',
+        'created_at',
+        'updated_at',
     ];
 
     protected $hidden = [
-        'password',
-        'remember_token',
+        'password_hash',
     ];
 
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
+            'email_verified_at' => 'immutable_datetime',
+            'accessibility_settings' => 'array',
         ];
     }
 
-    public function getKeyName(): string
+    protected static function newFactory(): Factory
     {
-        return 'id';
+        return UserFactory::new();
     }
 }

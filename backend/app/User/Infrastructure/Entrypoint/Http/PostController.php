@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\User\Infrastructure\Entrypoint\Http;
 
 use App\User\Application\CreateUser\CreateUser;
+use App\User\Infrastructure\Entrypoint\Http\Requests\CreateUserRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class PostController
 {
@@ -12,18 +14,14 @@ class PostController
         private CreateUser $createUser,
     ) {}
 
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(CreateUserRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
-
         $response = ($this->createUser)(
-            $validated['email'],
-            $validated['name'],
-            $validated['password'],
+            $request->validated('role'),
+            $request->validated('name'),
+            $request->validated('email'),
+            $request->validated('password'),
+            $request->validated('avatar_url'),
         );
 
         return new JsonResponse($response->toArray(), 201);
