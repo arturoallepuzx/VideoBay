@@ -19,7 +19,6 @@ jobs:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
-          script_stop: true
           command_timeout: 30m
           script: |
             set -e
