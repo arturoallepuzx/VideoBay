@@ -35,6 +35,12 @@ export class PlayerPage implements OnDestroy {
 
   protected readonly movie = signal<MovieDetail | null>(null);
   protected readonly subtitles = signal<Subtitle[]>([]);
+  protected readonly subOffset = signal(0);
+  protected readonly syncMode = signal(false);
+  protected readonly syncSpan = computed(() => {
+    const max = this.duration() || 600;
+    return Math.min(max, Math.max(10, Math.ceil(Math.abs(this.subOffset())) + 5));
+  });
   protected readonly notAvailable = signal(false);
 
   protected readonly playing = signal(false);
@@ -253,16 +259,95 @@ export class PlayerPage implements OnDestroy {
     }
   }
 
+  openSync(): void {
+    if (this.activeSub() === 'off') {
+      return;
+    }
+    this.showSettings.set(false);
+    this.syncMode.set(true);
+    this.applyCueLine();
+  }
+
+  closeSync(): void {
+    this.syncMode.set(false);
+    this.applyCueLine();
+  }
+
+  setOffset(event: Event): void {
+    this.subOffset.set(Math.round(Number((event.target as HTMLInputElement).value) * 10) / 10);
+    this.applyCueLine();
+  }
+
+  offsetText(): string {
+    const value = this.subOffset();
+    return (value > 0 ? '+' : '') + value.toFixed(1) + 's';
+  }
+
+  nudgeOffset(delta: number): void {
+    const max = this.duration() || 600;
+    this.subOffset.update((value) => Math.round(Math.min(max, Math.max(-max, value + delta)) * 10) / 10);
+    this.applyCueLine();
+  }
+
+  syncHere(): void {
+    const video = this.element();
+    if (!video) {
+      return;
+    }
+    let cues: TextTrackCueList | null = null;
+    const tracks = video.textTracks;
+    for (let i = 0; i < tracks.length; i++) {
+      if (tracks[i].mode === 'showing') {
+        cues = tracks[i].cues;
+        break;
+      }
+    }
+    if (!cues || cues.length === 0) {
+      return;
+    }
+    const now = video.currentTime;
+    const offset = this.subOffset();
+    let bestOrigin: number | null = null;
+    let bestDistance = Infinity;
+    for (let i = 0; i < cues.length; i++) {
+      const cue = cues[i] as VTTCue & { vbStart?: number };
+      const origin = cue.vbStart ?? cue.startTime;
+      const distance = Math.abs(origin + offset - now);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestOrigin = origin;
+      }
+    }
+    if (bestOrigin !== null) {
+      this.subOffset.set(Math.round((now - bestOrigin) * 10) / 10);
+      this.applyCueLine();
+    }
+  }
+
   private liftCues(track: TextTrack): void {
     const cues = track.cues;
     if (!cues) {
       return;
     }
-    const line = this.idle() ? 90 : 80;
+    const line = this.syncMode() ? 60 : (this.idle() ? 90 : 80);
+    const offset = this.subOffset();
     for (let i = 0; i < cues.length; i++) {
-      const cue = cues[i] as VTTCue;
+      const cue = cues[i] as VTTCue & { vbStart?: number; vbEnd?: number };
       cue.snapToLines = false;
       cue.line = line;
+      if (cue.vbStart === undefined) {
+        cue.vbStart = cue.startTime;
+        cue.vbEnd = cue.endTime;
+      }
+      const start = Math.max(0, cue.vbStart + offset);
+      const end = Math.max(start + 0.05, (cue.vbEnd ?? cue.vbStart) + offset);
+      if (end >= cue.startTime) {
+        cue.endTime = end;
+        cue.startTime = start;
+      } else {
+        cue.startTime = start;
+        cue.endTime = end;
+      }
     }
   }
 

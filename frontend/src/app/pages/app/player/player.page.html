@@ -89,6 +89,12 @@
             </div>
           }
 
+          @if (activeSub() !== 'off') {
+            <button type="button" class="subset__add-btn" (click)="openSync()">
+              <ion-icon name="time-outline"></ion-icon> Sincronizar subtítulos
+            </button>
+          }
+
           <button type="button" class="subset__add-btn" [class.is-open]="showAddSubs()" (click)="toggleAddSubs()">
             <ion-icon [name]="showAddSubs() ? 'remove' : 'add'"></ion-icon>
             {{ showAddSubs() ? 'Cerrar' : 'Añadir subtítulo' }}
@@ -154,6 +160,23 @@
               [attr.aria-pressed]="theme.subtitleBackground()" aria-label="Fondo de subtítulos"></button>
           </div>
         </div>
+      </div>
+    }
+
+    @if (syncMode()) {
+      <div class="player__sync">
+        <div class="player__sync-head">
+          <span class="player__sync-title"><ion-icon name="time-outline"></ion-icon> Sincronizar subtítulos</span>
+          <button class="btn btn--ghost player__sync-done" (click)="closeSync()">Hecho</button>
+        </div>
+        <div class="player__sync-row">
+          <button class="iconbtn" (click)="nudgeOffset(-0.1)" aria-label="Atrasar 0,1 s"><ion-icon name="remove"></ion-icon></button>
+          <input type="range" class="player__sync-slider" [min]="-syncSpan()" [max]="syncSpan()" step="0.1"
+            [value]="subOffset()" (input)="setOffset($event)" aria-label="Desfase de subtítulos" />
+          <button class="iconbtn" (click)="nudgeOffset(0.1)" aria-label="Adelantar 0,1 s"><ion-icon name="add"></ion-icon></button>
+          <span class="player__sync-value">{{ offsetText() }}</span>
+        </div>
+        <button class="btn btn--primary player__sync-here" (click)="syncHere()">Sincronizar aquí</button>
       </div>
     }
   </div>
