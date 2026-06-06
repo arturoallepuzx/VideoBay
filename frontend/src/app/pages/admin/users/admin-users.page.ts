@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { forkJoin } from 'rxjs';
 import { IonIcon } from '@ionic/angular/standalone';
 import { AdminSidebarComponent } from '../../../components/admin-sidebar/admin-sidebar.component';
 import { UserService } from '../../../services/user/user.service';
@@ -37,7 +38,10 @@ export class AdminUsersPage {
     { value: 'admin', label: 'Admin' },
   ];
 
-  protected readonly users = signal<AdminUser[]>([]);
+  protected readonly tab = signal<'all' | 'sessions'>('sessions');
+  protected readonly allUsers = signal<AdminUser[]>([]);
+  protected readonly sessionUsers = signal<AdminUser[]>([]);
+  protected readonly users = computed(() => (this.tab() === 'all' ? this.allUsers() : this.sessionUsers()));
   protected readonly loading = signal(false);
   protected readonly skeletons = Array.from({ length: 5 });
   protected readonly saving = signal(false);
@@ -57,6 +61,10 @@ export class AdminUsersPage {
 
   protected roleLabel(value: string): string {
     return this.roles.find((item) => item.value === value)?.label ?? value;
+  }
+
+  protected setTab(tab: 'all' | 'sessions'): void {
+    this.tab.set(tab);
   }
 
   protected toggleCreate(): void {
@@ -140,7 +148,10 @@ export class AdminUsersPage {
 
   protected forceLogout(user: AdminUser): void {
     this.userService.forceLogout(user.id).subscribe({
-      next: () => this.toast.show('Sesiones cerradas'),
+      next: () => {
+        this.toast.show('Sesiones cerradas');
+        this.load();
+      },
       error: (err: HttpErrorResponse) => this.toast.show(this.messageFor(err)),
     });
   }
@@ -167,9 +178,13 @@ export class AdminUsersPage {
 
   private load(): void {
     this.loading.set(true);
-    this.userService.listUsers().subscribe({
-      next: (users) => {
-        this.users.set(users);
+    forkJoin({
+      all: this.userService.listAllUsers(),
+      sessions: this.userService.listSessionUsers(),
+    }).subscribe({
+      next: ({ all, sessions }) => {
+        this.allUsers.set(all);
+        this.sessionUsers.set(sessions);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),

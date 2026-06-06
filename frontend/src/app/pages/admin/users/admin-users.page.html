@@ -10,6 +10,15 @@
       </button>
     </div>
 
+    <div class="search-tabs">
+      <button class="search-tab" [class.is-active]="tab() === 'sessions'" (click)="setTab('sessions')">
+        Sesiones activas <span class="search-tab__count">{{ sessionUsers().length }}</span>
+      </button>
+      <button class="search-tab" [class.is-active]="tab() === 'all'" (click)="setTab('all')">
+        Todos <span class="search-tab__count">{{ allUsers().length }}</span>
+      </button>
+    </div>
+
     @if (showCreate()) {
       <div class="stat-card" style="padding:24px;margin-bottom:20px">
         <h2 class="h-card" style="margin:0 0 16px">Nuevo usuario</h2>
@@ -56,24 +65,43 @@
       <div class="table-scroll">
         <table class="table table--cards">
           <thead>
-            <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Sesiones</th><th></th></tr>
+            <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>{{ tab() === 'sessions' ? 'Sesiones' : 'Registrado' }}</th><th></th></tr>
           </thead>
           <tbody>
             @for (user of users(); track user.id) {
               <tr>
-                <td data-label="Nombre" style="font-family:var(--serif);font-size:15px">{{ user.name }}</td>
+                <td data-label="Nombre">
+                  <div class="user-cell">
+                    <span class="user-avatar">
+                      @if (user.avatar_url) {
+                        <img [src]="user.avatar_url" [alt]="user.name" />
+                      } @else {
+                        {{ user.name.charAt(0) }}
+                      }
+                    </span>
+                    <span class="user-cell__name">{{ user.name }}</span>
+                  </div>
+                </td>
                 <td data-label="Email" class="mono tiny">{{ user.email }}</td>
                 <td data-label="Rol">
                   <span class="status-pill {{ user.role === 'admin' ? 'status-pill--ready' : '' }}">{{ roleLabel(user.role) }}</span>
                 </td>
-                <td data-label="Sesiones" class="mono tiny">
-                  @if (user.active_sessions) {
-                    <span class="status-pill status-pill--ready">{{ user.active_sessions }} activa{{ user.active_sessions === 1 ? '' : 's' }}</span>
-                    @if (user.last_seen_at) {
-                      <div class="muted" style="margin-top:4px">visto {{ user.last_seen_at | date:'dd MMM HH:mm' }}</div>
+                <td [attr.data-label]="tab() === 'sessions' ? 'Sesiones' : 'Registrado'" class="mono tiny">
+                  @if (tab() === 'sessions') {
+                    @if (user.active_sessions) {
+                      <span class="status-pill status-pill--ready">{{ user.active_sessions }} activa{{ user.active_sessions === 1 ? '' : 's' }}</span>
+                      @if (user.last_seen_at) {
+                        <div class="muted" style="margin-top:4px">visto {{ user.last_seen_at | date:'dd MMM HH:mm' }}</div>
+                      }
+                    } @else {
+                      <span class="muted">Sin sesiones</span>
                     }
                   } @else {
-                    <span class="muted">Sin sesiones</span>
+                    @if (user.created_at) {
+                      {{ user.created_at | date:'dd MMM yyyy' }}
+                    } @else {
+                      <span class="muted">—</span>
+                    }
                   }
                 </td>
                 <td data-label="Acciones">
@@ -83,7 +111,7 @@
                       <button class="btn" (click)="cancelDelete()">No</button>
                     } @else {
                       <button class="btn" (click)="startEdit(user)">Editar</button>
-                      <button class="btn" [disabled]="!user.active_sessions" (click)="forceLogout(user)">Cerrar sesiones</button>
+                      <button class="btn" [disabled]="tab() === 'sessions' && !user.active_sessions" (click)="forceLogout(user)">Cerrar sesiones</button>
                       <button class="btn" style="color:var(--vb-red)" (click)="askDelete(user)">Borrar</button>
                     }
                   </div>

@@ -1949,6 +1949,25 @@ img { display: block; max-width: 100%; }
 .btn--danger-outline { color: var(--vb-red); border-color: var(--vb-red); }
 .btn--danger-outline:hover { background: var(--vb-red-soft); }
 
+.user-cell { display: flex; align-items: center; gap: 10px; }
+.user-cell__name { font-family: var(--serif); font-size: 15px; }
+.user-avatar {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--text-2);
+}
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
 /* ============================================================
    REVIEWS
    ============================================================ */

@@ -93,6 +93,7 @@ class EloquentVideoFileRepository implements VideoFileRepositoryInterface
     public function listForAdmin(int $page, int $perPage): array
     {
         $base = $this->model->newQueryWithoutScopes()
+            ->whereNull('video_files.deleted_at')
             ->join('movies as m', 'video_files.movie_id', '=', 'm.id');
 
         $total = (int) (clone $base)->count();

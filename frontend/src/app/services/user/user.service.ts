@@ -6,7 +6,11 @@ import { AdminUser, CreateUserPayload, UpdateUserPayload } from './user.models';
 @Injectable({ providedIn: 'root' })
 export class UserService extends BaseApiService {
 
-  listUsers(): Observable<AdminUser[]> {
+  listAllUsers(): Observable<AdminUser[]> {
+    return this.get<AdminUser[]>('/users');
+  }
+
+  listSessionUsers(): Observable<AdminUser[]> {
     return this.get<{ users: AdminUser[] }>('/users/active-sessions').pipe(map((response) => response.users));
   }
 
