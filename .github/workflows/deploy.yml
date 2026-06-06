@@ -39,8 +39,9 @@ jobs:
             echo "== Recreate backend (new code + opcache) =="
             $DCP up -d --force-recreate api worker scheduler
 
-            echo "== Rebuild frontend (Angular) =="
-            $DCP up -d --build --force-recreate frontend
+            echo "== Rebuild frontend (Angular, runs in foreground; fails the deploy on build error) =="
+            $DCP build frontend
+            $DCP run --rm --no-deps -T frontend bash -c "npm ci && npm run build -- --configuration=production"
 
             echo "== Reload Caddy (in case the Caddyfile changed) =="
             $DCP restart caddy
