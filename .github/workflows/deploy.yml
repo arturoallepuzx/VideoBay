@@ -1,0 +1,49 @@
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH to the droplet
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+            DCP="docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.prod.yml"
+
+            echo "== Pull changes =="
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "== Ensure base services are up =="
+            $DCP up -d db redis api worker scheduler
+
+            echo "== Backend deps + migrations =="
+            $DCP exec -T api composer install --no-interaction --optimize-autoloader
+            $DCP exec -T api php artisan migrate --force
+
+            echo "== Recreate backend (new code + opcache) =="
+            $DCP up -d --force-recreate api worker scheduler
+
+            echo "== Rebuild frontend (Angular) =="
+            $DCP up -d --build --force-recreate frontend
+
+            echo "== Reload Caddy (in case the Caddyfile changed) =="
+            $DCP restart caddy
+
+            echo "== Deploy OK =="
