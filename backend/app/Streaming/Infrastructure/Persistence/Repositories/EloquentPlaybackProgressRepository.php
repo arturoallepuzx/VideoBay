@@ -47,6 +47,14 @@ class EloquentPlaybackProgressRepository implements PlaybackProgressRepositoryIn
         );
     }
 
+    public function delete(Uuid $userId, Uuid $movieId): void
+    {
+        $this->connection->table(self::TABLE)
+            ->where('user_id', $this->userIdResolver->toInternalId($userId))
+            ->where('movie_id', $this->movieIdResolver->toInternalId($movieId))
+            ->delete();
+    }
+
     public function listContinueWatchingByUser(Uuid $userId, int $page, int $perPage): array
     {
         return $this->paginateByUser($userId, false, $page, $perPage);

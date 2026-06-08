@@ -13,6 +13,8 @@ interface PlaybackProgressRepositoryInterface
 
     public function save(PlaybackProgress $progress): void;
 
+    public function delete(Uuid $userId, Uuid $movieId): void;
+
     /** @return array{items: list<PlaybackProgress>, total: int, page: int, totalPages: int} */
     public function listContinueWatchingByUser(Uuid $userId, int $page, int $perPage): array;
 

@@ -89,6 +89,36 @@ class PlaybackTest extends TestCase
             ->assertJsonPath('total', 0);
     }
 
+    public function test_remove_deletes_progress_and_drops_it_from_continue_watching(): void
+    {
+        $this->actingAsRealUser();
+        $movie = MovieFactory::new()->create();
+
+        $this->putJson('/api/playback/'.$movie->uuid, [
+            'position_seconds' => 50,
+            'duration_seconds' => 3600,
+            'completed' => false,
+        ])->assertStatus(204);
+
+        $this->deleteJson('/api/playback/'.$movie->uuid)->assertStatus(204);
+
+        $this->getJson('/api/playback/continue-watching')
+            ->assertStatus(200)
+            ->assertJsonPath('total', 0);
+
+        $this->getJson('/api/playback/'.$movie->uuid)
+            ->assertStatus(200)
+            ->assertJsonPath('position_seconds', null);
+    }
+
+    public function test_remove_requires_authentication(): void
+    {
+        $this->withoutCsrfMiddleware();
+        $movie = MovieFactory::new()->create();
+
+        $this->deleteJson('/api/playback/'.$movie->uuid)->assertStatus(401);
+    }
+
     public function test_record_requires_authentication(): void
     {
         $this->withoutCsrfMiddleware();

@@ -2,14 +2,35 @@
   display: flex;
   gap: 16px;
   overflow-x: auto;
-  padding-bottom: 8px;
-  scroll-snap-type: x mandatory;
+  padding-bottom: 10px;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
+  -webkit-touch-callout: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.cw-row.is-dragging {
+  cursor: grabbing;
+}
+.cw-row::-webkit-scrollbar {
+  height: 8px;
+}
+.cw-row::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cw-row::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+.cw-row::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
 }
 
 .cw-card {
   flex: 0 0 180px;
-  scroll-snap-align: start;
+  min-width: 0;
   cursor: pointer;
 }
 
@@ -43,6 +64,38 @@
 
 .cw-card:hover .cw-card__play {
   opacity: 1;
+}
+
+.cw-card__remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-fast, 0.15s) var(--ease, ease), background var(--t-fast, 0.15s);
+}
+
+.cw-card:hover .cw-card__remove,
+.cw-card__remove.is-visible,
+.cw-card__remove:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cw-card__remove:hover {
+  background: var(--vb-red);
 }
 
 .cw-card__bar {

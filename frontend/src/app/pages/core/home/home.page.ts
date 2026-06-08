@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, forkJoin, map, of } from 'rxjs';
@@ -31,6 +31,7 @@ export class HomePage {
   protected readonly streamable = signal<MovieCard[]>([]);
   protected readonly purchasable = signal<MovieCard[]>([]);
   protected readonly continueWatching = signal<ContinueWatchingCard[]>([]);
+  protected readonly revealedId = signal<string | null>(null);
   protected readonly loaded = signal(false);
   protected readonly skeletons = Array.from({ length: 6 });
 
@@ -94,7 +95,102 @@ export class HomePage {
   }
 
   protected resume(id: string): void {
+    if (this.cwMoved) {
+      this.cwMoved = false;
+      return;
+    }
+    if (this.longPressed) {
+      this.longPressed = false;
+      return;
+    }
+    if (this.revealedId() !== null) {
+      this.revealedId.set(null);
+      return;
+    }
     this.router.navigate(['/player', id]);
+  }
+
+  private readonly cwScroller = viewChild<ElementRef<HTMLElement>>('cwScroller');
+  private cwDragging = false;
+  private cwMoved = false;
+  private cwStartX = 0;
+  private cwStartScroll = 0;
+  private longPressed = false;
+  private pressTimer?: ReturnType<typeof setTimeout>;
+
+  protected onCardDown(card: ContinueWatchingCard, event: PointerEvent): void {
+    if (event.button !== 0) {
+      return;
+    }
+    this.clearPressTimer();
+    this.longPressed = false;
+    const id = card.uuid;
+    this.pressTimer = setTimeout(() => {
+      this.longPressed = true;
+      this.revealedId.set(id);
+    }, 500);
+  }
+
+  protected onCwDown(event: PointerEvent): void {
+    const element = this.cwScroller()?.nativeElement;
+    if (!element || event.button !== 0) {
+      return;
+    }
+    this.cwDragging = true;
+    this.cwMoved = false;
+    this.cwStartX = event.clientX;
+    this.cwStartScroll = element.scrollLeft;
+    element.classList.add('is-dragging');
+  }
+
+  protected onCwMove(event: PointerEvent): void {
+    if (!this.cwDragging) {
+      return;
+    }
+    const element = this.cwScroller()?.nativeElement;
+    if (!element) {
+      return;
+    }
+    const delta = event.clientX - this.cwStartX;
+    if (Math.abs(delta) > 4) {
+      this.cwMoved = true;
+      this.clearPressTimer();
+    }
+    element.scrollLeft = this.cwStartScroll - delta;
+  }
+
+  protected onCwUp(): void {
+    this.cwDragging = false;
+    this.clearPressTimer();
+    this.cwScroller()?.nativeElement.classList.remove('is-dragging');
+  }
+
+  private clearPressTimer(): void {
+    if (this.pressTimer) {
+      clearTimeout(this.pressTimer);
+      this.pressTimer = undefined;
+    }
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  protected onDocumentPointerDown(event: PointerEvent): void {
+    if (this.revealedId() === null) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.cw-card')) {
+      return;
+    }
+    this.revealedId.set(null);
+  }
+
+  protected removeContinue(card: ContinueWatchingCard, event: Event): void {
+    event.stopPropagation();
+    this.revealedId.set(null);
+    this.continueWatching.update((cards) => cards.filter((c) => c.uuid !== card.uuid));
+    this.streaming.deleteProgress(card.uuid).subscribe({
+      error: () => this.toast.show('No se pudo quitar de la lista'),
+    });
   }
 
   private loadContinueCards(items: ContinueWatchingItem[]): void {

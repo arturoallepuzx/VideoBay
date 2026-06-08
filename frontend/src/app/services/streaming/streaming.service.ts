@@ -28,6 +28,10 @@ export class StreamingService extends BaseApiService {
     });
   }
 
+  deleteProgress(movieId: string): Observable<unknown> {
+    return this.delete(`/playback/${movieId}`);
+  }
+
   streamUrl(videoFileId: string): string {
     return `${environment.apiUrl}/stream/${videoFileId}`;
   }

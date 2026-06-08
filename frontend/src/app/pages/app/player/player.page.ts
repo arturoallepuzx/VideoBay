@@ -541,8 +541,10 @@ export class PlayerPage implements OnDestroy {
     if (!video || !this.movieId || !video.currentTime) {
       return;
     }
+    const duration = video.duration || 0;
+    const finished = completed || (duration > 0 && video.currentTime >= duration * 0.95);
     this.streaming
-      .recordProgress(this.movieId, video.currentTime, video.duration || null, completed)
+      .recordProgress(this.movieId, video.currentTime, duration || null, finished)
       .subscribe({ error: () => undefined });
   }
 }

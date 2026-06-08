@@ -57,6 +57,7 @@ use App\Streaming\Infrastructure\Entrypoint\Http\ListVideoFilesForAdminControlle
 use App\Streaming\Infrastructure\Entrypoint\Http\ReassignVideoFileController as StreamingReassignVideoFileController;
 use App\Streaming\Infrastructure\Entrypoint\Http\RecordPlaybackProgressController as StreamingRecordPlaybackProgressController;
 use App\Streaming\Infrastructure\Entrypoint\Http\RegisterExistingVideoFileController as StreamingRegisterExistingVideoFileController;
+use App\Streaming\Infrastructure\Entrypoint\Http\RemovePlaybackProgressController as StreamingRemovePlaybackProgressController;
 use App\Streaming\Infrastructure\Entrypoint\Http\ServeVideoRangeController as StreamingServeVideoRangeController;
 use App\Streaming\Infrastructure\Entrypoint\Http\UploadVideoFileController as StreamingUploadVideoFileController;
 use App\Subtitle\Infrastructure\Entrypoint\Http\ImportExternalSubtitleController as SubtitleImportExternalSubtitleController;
@@ -312,6 +313,7 @@ Route::prefix('/playback')
         Route::get('/history', StreamingListMyWatchHistoryController::class);
         Route::get('/{movieId}', StreamingGetPlaybackProgressController::class)->whereUuid('movieId');
         Route::put('/{movieId}', StreamingRecordPlaybackProgressController::class)->whereUuid('movieId');
+        Route::delete('/{movieId}', StreamingRemovePlaybackProgressController::class)->whereUuid('movieId');
     });
 
 Route::post('/webhooks/stripe', OrderStripeWebhookController::class)

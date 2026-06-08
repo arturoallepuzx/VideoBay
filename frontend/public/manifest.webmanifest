@@ -5,7 +5,6 @@
   "description": "Compraventa y streaming de películas.",
   "lang": "es",
   "display": "standalone",
-  "orientation": "any",
   "scope": "/",
   "start_url": "/",
   "theme_color": "#0d0d0d",

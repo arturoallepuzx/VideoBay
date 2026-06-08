@@ -10,6 +10,7 @@ use App\Review\Infrastructure\Persistence\Models\EloquentReview;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\Shared\Infrastructure\Persistence\UserIdResolverInterface;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Collection;
 
 class EloquentReviewLikeRepository implements ReviewLikeRepositoryInterface
 {
@@ -42,7 +43,7 @@ class EloquentReviewLikeRepository implements ReviewLikeRepositoryInterface
 
         $uuidValues = array_map(fn (Uuid $id): string => $id->value(), $reviewIds);
 
-        /** @var \Illuminate\Support\Collection<int, string> $idMap */
+        /** @var Collection<int, string> $idMap */
         $idMap = EloquentReview::query()
             ->whereIn('uuid', $uuidValues)
             ->pluck('uuid', 'id');

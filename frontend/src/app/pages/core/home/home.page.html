@@ -34,13 +34,20 @@
         <button class="btn btn--ghost" (click)="go('/stream')">Ver catálogo <ion-icon name="arrow-forward"></ion-icon></button>
       </div>
       <div class="section__body">
-        <div class="cw-row">
+        <div class="cw-row" #cwScroller (pointerdown)="onCwDown($event)" (pointermove)="onCwMove($event)"
+          (pointerup)="onCwUp()" (pointercancel)="onCwUp()" (pointerleave)="onCwUp()"
+          (contextmenu)="$event.preventDefault()">
           @for (card of continueWatching(); track card.uuid) {
-            <article class="cw-card" (click)="resume(card.uuid)">
+            <article class="cw-card" (click)="resume(card.uuid)" (pointerdown)="onCardDown(card, $event)">
               <div class="cw-card__poster">
                 @if (card.poster_path) {
                   <img [src]="card.poster_path | tmdbImage: 'poster'" [alt]="card.title" loading="lazy" />
                 }
+                <button class="cw-card__remove" type="button" aria-label="Quitar de seguir viendo"
+                  [class.is-visible]="revealedId() === card.uuid"
+                  (click)="removeContinue(card, $event)">
+                  <ion-icon name="close"></ion-icon>
+                </button>
                 <div class="cw-card__play"><ion-icon name="play-circle"></ion-icon></div>
                 <div class="cw-card__bar"><span [style.width.%]="card.progressPct"></span></div>
               </div>
