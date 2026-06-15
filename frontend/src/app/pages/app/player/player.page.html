@@ -7,7 +7,7 @@
   <div class="player" [class.is-idle]="idle()"
     [class.subs--sm]="theme.subtitleSize() === 'sm'" [class.subs--lg]="theme.subtitleSize() === 'lg'"
     [class.subs--bg]="theme.subtitleBackground()"
-    (mousemove)="wake()">
+    (mousemove)="wake($event)">
     <div class="player__video" (click)="onVideoTap($event)">
       <video #video [src]="streamUrl()" crossorigin="use-credentials" autoplay playsinline
         style="width:100%;height:100%;object-fit:contain;background:#000"
@@ -23,9 +23,10 @@
 
       @if (buffering()) {
         <div class="player__spinner" aria-label="Cargando"></div>
-      } @else if (!playing()) {
-        <button class="player__center-play" (click)="togglePlay(); $event.stopPropagation()" aria-label="Reproducir">
-          <ion-icon name="play" style="font-size:32px"></ion-icon>
+      } @else if (!playing() || (isTouch && !idle())) {
+        <button class="player__center-play" (click)="togglePlay(); $event.stopPropagation()"
+          [attr.aria-label]="playing() ? 'Pausa' : 'Reproducir'">
+          <ion-icon [name]="playing() ? 'pause' : 'play'" style="font-size:32px"></ion-icon>
         </button>
       }
     </div>
@@ -41,8 +42,13 @@
     </div>
 
     <div class="player__bottom">
-      <div class="player__progress" (click)="seek($event)">
-        <div class="player__progress-fill" [style.width.%]="progressPct()"></div>
+      <div class="player__progress" [class.is-scrubbing]="isScrubbing()"
+        (pointerdown)="onScrubDown($event)" (pointermove)="onScrubMove($event)"
+        (pointerup)="onScrubUp($event)" (pointercancel)="onScrubUp($event)">
+        <div class="player__progress-track">
+          <div class="player__progress-fill" [style.width.%]="progressPct()"></div>
+        </div>
+        <div class="player__progress-handle" [style.left.%]="progressPct()"></div>
       </div>
       <div class="player__controls">
         <button class="iconbtn" (click)="togglePlay()" [attr.aria-label]="playing() ? 'Pausa' : 'Reproducir'">
@@ -67,8 +73,9 @@
           [style.color]="showSettings() ? 'var(--vb-red)' : null" aria-label="Subtítulos">
           <ion-icon name="text-outline" style="font-size:18px"></ion-icon>
         </button>
-        <button class="iconbtn" (click)="toggleFullscreen()" aria-label="Pantalla completa">
-          <ion-icon name="expand" style="font-size:18px"></ion-icon>
+        <button class="iconbtn" (click)="toggleFullscreen()"
+          [attr.aria-label]="isFullscreen() ? 'Salir de pantalla completa' : 'Pantalla completa'">
+          <ion-icon [name]="isFullscreen() ? 'contract' : 'expand'" style="font-size:18px"></ion-icon>
         </button>
       </div>
     </div>

@@ -1093,31 +1093,45 @@ img { display: block; max-width: 100%; }
 .player.is-idle * { cursor: none; }
 
 .player__progress {
-  height: 6px;
-  background: rgba(255,255,255,0.18);
-  cursor: pointer;
   position: relative;
   margin-bottom: 14px;
+  padding: 10px 0;
+  cursor: pointer;
+  touch-action: none;
+}
+.player__progress-track {
+  position: relative;
+  height: 6px;
+  background: rgba(255,255,255,0.22);
   border-radius: 3px;
   overflow: hidden;
 }
 .player__progress-fill {
-  height: 100%;
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
   background: var(--vb-red);
   transition: width 0.1s linear;
-  position: relative;
 }
-.player__progress-fill::after {
-  content: '';
+.player__progress-handle {
   position: absolute;
-  right: -6px; top: 50%;
-  width: 12px; height: 12px;
+  top: 50%;
+  left: 0;
+  width: 14px; height: 14px;
+  margin-left: -7px;
   border-radius: 50%;
   background: var(--vb-red);
+  box-shadow: 0 0 0 4px rgba(255,45,45,0.25);
   transform: translateY(-50%) scale(0);
   transition: transform var(--t-fast);
+  pointer-events: none;
 }
-.player__progress:hover .player__progress-fill::after { transform: translateY(-50%) scale(1); }
+.player__progress:hover .player__progress-handle,
+.player__progress.is-scrubbing .player__progress-handle { transform: translateY(-50%) scale(1); }
+.player__progress.is-scrubbing .player__progress-fill { transition: none; }
+@media (hover: none) {
+  .player__progress-handle { transform: translateY(-50%) scale(1); }
+}
 
 .player__controls {
   display: flex;

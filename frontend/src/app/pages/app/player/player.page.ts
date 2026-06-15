@@ -50,6 +50,11 @@ export class PlayerPage implements OnDestroy {
   protected readonly muted = signal(false);
   protected readonly volume = signal(1);
   protected readonly idle = signal(false);
+  protected readonly isFullscreen = signal(false);
+  protected readonly isScrubbing = signal(false);
+  protected get isTouch(): boolean {
+    return window.matchMedia('(hover: none)').matches;
+  }
   protected readonly showSettings = signal(false);
   protected readonly activeSub = signal('off');
 
@@ -96,6 +101,8 @@ export class PlayerPage implements OnDestroy {
   private movieId = '';
   private resumeAt = 0;
   private idleTimer?: ReturnType<typeof setTimeout>;
+  private lastPointerX = -1;
+  private lastPointerY = -1;
   private saveTimer?: ReturnType<typeof setInterval>;
   private lastTap = 0;
   private tapTimer?: ReturnType<typeof setTimeout>;
@@ -127,7 +134,20 @@ export class PlayerPage implements OnDestroy {
     }
 
     this.lastTap = now;
-    this.tapTimer = setTimeout(() => this.togglePlay(), 260);
+    this.tapTimer = setTimeout(() => this.onSingleTap(), 260);
+  }
+
+  private onSingleTap(): void {
+    if (this.isTouch) {
+      if (this.idle()) {
+        this.wake();
+      } else {
+        clearTimeout(this.idleTimer);
+        this.idle.set(true);
+      }
+      return;
+    }
+    this.togglePlay();
   }
 
   togglePlay(): void {
@@ -166,14 +186,37 @@ export class PlayerPage implements OnDestroy {
     this.saveProgress(true);
   }
 
-  seek(event: MouseEvent): void {
+  onScrubDown(event: PointerEvent): void {
+    const el = event.currentTarget as HTMLElement;
+    el.setPointerCapture?.(event.pointerId);
+    this.isScrubbing.set(true);
+    this.seekToPointer(event, el);
+    event.stopPropagation();
+  }
+
+  onScrubMove(event: PointerEvent): void {
+    if (!this.isScrubbing()) {
+      return;
+    }
+    this.seekToPointer(event, event.currentTarget as HTMLElement);
+  }
+
+  onScrubUp(event: PointerEvent): void {
+    if (!this.isScrubbing()) {
+      return;
+    }
+    this.isScrubbing.set(false);
+    (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
+  }
+
+  private seekToPointer(event: PointerEvent, el: HTMLElement): void {
     const video = this.element();
     if (!video || this.duration() === 0) {
       return;
     }
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const ratio = (event.clientX - rect.left) / rect.width;
-    const target = Math.max(0, Math.min(this.duration(), this.duration() * ratio));
+    const rect = el.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const target = this.duration() * ratio;
     this.currentTime.set(target);
     video.currentTime = target;
   }
@@ -453,12 +496,29 @@ export class PlayerPage implements OnDestroy {
     }
   }
 
+  @HostListener('document:fullscreenchange')
+  onFullscreenChange(): void {
+    this.isFullscreen.set(!!document.fullscreenElement);
+  }
+
   close(): void {
     this.saveProgress(false);
     this.router.navigate(['/movie', this.movieId]);
   }
 
-  wake(): void {
+  wake(event?: MouseEvent): void {
+    if (event) {
+      if (this.isTouch) {
+        return;
+      }
+      const movedX = Math.abs(event.clientX - this.lastPointerX);
+      const movedY = Math.abs(event.clientY - this.lastPointerY);
+      if (movedX < 3 && movedY < 3) {
+        return;
+      }
+      this.lastPointerX = event.clientX;
+      this.lastPointerY = event.clientY;
+    }
     this.idle.set(false);
     clearTimeout(this.idleTimer);
     this.idleTimer = setTimeout(() => this.idle.set(true), 3500);
@@ -511,7 +571,11 @@ export class PlayerPage implements OnDestroy {
 
         this.loadSubtitles(movie.uuid);
         this.loadProgress(movie.uuid);
-        this.wake();
+        if (this.isTouch) {
+          this.idle.set(true);
+        } else {
+          this.wake();
+        }
         this.saveTimer = setInterval(() => this.saveProgress(false), 10000);
       },
       error: () => this.notAvailable.set(true),
