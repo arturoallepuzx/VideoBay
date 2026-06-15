@@ -69,7 +69,7 @@
         </div>
         <span class="player__time">{{ currentTime() | duration }} <span style="opacity:0.5">/ {{ duration() | duration }}</span></span>
         <span class="player__spacer"></span>
-        <button class="iconbtn" (click)="showSettings.set(!showSettings())"
+        <button class="iconbtn" (click)="toggleSettings()"
           [style.color]="showSettings() ? 'var(--vb-red)' : null" aria-label="Subtítulos">
           <ion-icon name="text-outline" style="font-size:18px"></ion-icon>
         </button>

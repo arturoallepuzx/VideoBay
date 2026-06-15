@@ -143,7 +143,7 @@ export class PlayerPage implements OnDestroy {
         this.wake();
       } else {
         clearTimeout(this.idleTimer);
-        this.idle.set(true);
+        this.goIdle();
       }
       return;
     }
@@ -302,6 +302,11 @@ export class PlayerPage implements OnDestroy {
     }
   }
 
+  toggleSettings(): void {
+    this.showSettings.update((open) => !open);
+    this.wake();
+  }
+
   openSync(): void {
     if (this.activeSub() === 'off') {
       return;
@@ -309,11 +314,13 @@ export class PlayerPage implements OnDestroy {
     this.showSettings.set(false);
     this.syncMode.set(true);
     this.applyCueLine();
+    this.wake();
   }
 
   closeSync(): void {
     this.syncMode.set(false);
     this.applyCueLine();
+    this.wake();
   }
 
   setOffset(event: Event): void {
@@ -367,12 +374,23 @@ export class PlayerPage implements OnDestroy {
     }
   }
 
+  private cueLine(): number {
+    if (!this.syncMode()) {
+      return this.idle() ? 90 : 80;
+    }
+    const height = this.element()?.clientHeight || window.innerHeight || 0;
+    if (height <= 0) {
+      return 60;
+    }
+    return Math.max(12, Math.min(60, ((height - 340) / height) * 100));
+  }
+
   private liftCues(track: TextTrack): void {
     const cues = track.cues;
     if (!cues) {
       return;
     }
-    const line = this.syncMode() ? 60 : (this.idle() ? 90 : 80);
+    const line = this.cueLine();
     const offset = this.subOffset();
     for (let i = 0; i < cues.length; i++) {
       const cue = cues[i] as VTTCue & { vbStart?: number; vbEnd?: number };
@@ -501,6 +519,11 @@ export class PlayerPage implements OnDestroy {
     this.isFullscreen.set(!!document.fullscreenElement);
   }
 
+  @HostListener('window:resize')
+  onResize(): void {
+    this.applyCueLine();
+  }
+
   close(): void {
     this.saveProgress(false);
     this.router.navigate(['/movie', this.movieId]);
@@ -521,7 +544,14 @@ export class PlayerPage implements OnDestroy {
     }
     this.idle.set(false);
     clearTimeout(this.idleTimer);
-    this.idleTimer = setTimeout(() => this.idle.set(true), 3500);
+    this.idleTimer = setTimeout(() => this.goIdle(), 3500);
+  }
+
+  private goIdle(): void {
+    if (this.showSettings() || this.syncMode()) {
+      return;
+    }
+    this.idle.set(true);
   }
 
   @HostListener('document:keydown', ['$event'])
