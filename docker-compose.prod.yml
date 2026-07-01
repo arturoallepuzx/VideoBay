@@ -5,16 +5,19 @@ services:
     command: php-fpm
     volumes:
       - /var/lib/videobay:/var/lib/videobay
+      - /mnt/videobay_media:/mnt/videobay_media
 
   worker:
     restart: unless-stopped
     volumes:
       - /var/lib/videobay:/var/lib/videobay
+      - /mnt/videobay_media:/mnt/videobay_media
 
   scheduler:
     restart: unless-stopped
     volumes:
       - /var/lib/videobay:/var/lib/videobay
+      - /mnt/videobay_media:/mnt/videobay_media
 
   frontend:
     ports: []
