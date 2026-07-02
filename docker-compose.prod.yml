@@ -6,18 +6,21 @@ services:
     volumes:
       - /var/lib/videobay:/var/lib/videobay
       - /mnt/videobay_media:/mnt/videobay_media
+      - /mnt/videobay_media2:/mnt/videobay_media2
 
   worker:
     restart: unless-stopped
     volumes:
       - /var/lib/videobay:/var/lib/videobay
       - /mnt/videobay_media:/mnt/videobay_media
+      - /mnt/videobay_media2:/mnt/videobay_media2
 
   scheduler:
     restart: unless-stopped
     volumes:
       - /var/lib/videobay:/var/lib/videobay
       - /mnt/videobay_media:/mnt/videobay_media
+      - /mnt/videobay_media2:/mnt/videobay_media2
 
   frontend:
     ports: []
