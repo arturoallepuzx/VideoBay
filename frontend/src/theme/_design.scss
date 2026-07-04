@@ -2327,27 +2327,14 @@ img { display: block; max-width: 100%; }
   .topnav__search { display: none; }
   .topnav__search-btn { display: none; }
   .topnav { padding: 0 16px; gap: 12px; }
-  .app--chrome {
-    height: 100vh;
-    height: 100svh;
-    overflow: hidden;
-    padding-bottom: 0;
-  }
-  .app--chrome .topnav { position: static; }
-  .app--chrome vb-top-nav,
-  .app--chrome vb-mobile-tabs { flex: 0 0 auto; }
   .app--chrome .main {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-top: 0;
+    padding-bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom, 0));
   }
-  .app--chrome .tabs { position: static; }
   .app--chrome .topnav,
   .app--chrome .tabs { touch-action: none; }
   .page { padding: 20px 16px 24px; }
 
+  html,
   .app--chrome .main,
   .cw-row,
   .table-scroll,
@@ -2355,6 +2342,7 @@ img { display: block; max-width: 100%; }
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
+  html::-webkit-scrollbar,
   .app--chrome .main::-webkit-scrollbar,
   .cw-row::-webkit-scrollbar,
   .table-scroll::-webkit-scrollbar,
