@@ -5,7 +5,6 @@ import {
   HostListener,
   OnDestroy,
   computed,
-  effect,
   inject,
   signal,
   viewChild,
@@ -57,6 +56,7 @@ export class PlayerPage implements OnDestroy {
   }
   protected readonly showSettings = signal(false);
   protected readonly activeSub = signal('off');
+  protected readonly cueText = signal('');
 
   protected readonly showAddSubs = signal(false);
   protected readonly searchingSubs = signal(false);
@@ -100,6 +100,7 @@ export class PlayerPage implements OnDestroy {
 
   private movieId = '';
   private resumeAt = 0;
+  private activeTrack: TextTrack | null = null;
   private idleTimer?: ReturnType<typeof setTimeout>;
   private lastPointerX = -1;
   private lastPointerY = -1;
@@ -108,18 +109,25 @@ export class PlayerPage implements OnDestroy {
   private tapTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
+    this.volume.set(this.theme.playerVolume());
+    this.muted.set(this.theme.playerMuted());
+
     this.route.paramMap.subscribe((params) => {
       const id = params.get('id');
       if (id) {
         this.load(id);
       }
     });
-
-    effect(() => {
-      this.idle();
-      this.applyCueLine();
-    });
   }
+
+  private readonly onCueChange = (): void => {
+    const cues = this.activeTrack?.activeCues;
+    const parts: string[] = [];
+    for (let i = 0; cues && i < cues.length; i++) {
+      parts.push((cues[i] as VTTCue).text);
+    }
+    this.cueText.set(parts.join('\n'));
+  };
 
   onVideoTap(event: MouseEvent): void {
     const now = Date.now();
@@ -168,6 +176,7 @@ export class PlayerPage implements OnDestroy {
       return;
     }
     video.volume = this.volume();
+    video.muted = this.muted();
     this.duration.set(video.duration || 0);
     if (this.resumeAt > 5 && this.resumeAt < video.duration - 5) {
       video.currentTime = this.resumeAt;
@@ -236,17 +245,20 @@ export class PlayerPage implements OnDestroy {
     if (video) {
       video.muted = !video.muted;
       this.muted.set(video.muted);
+      this.theme.setPlayerMuted(video.muted);
     }
   }
 
   setVolume(event: Event): void {
     const value = Number((event.target as HTMLInputElement).value);
     this.volume.set(value);
+    this.theme.setPlayerVolume(value);
     const video = this.element();
     if (video) {
       video.volume = value;
       video.muted = value === 0;
       this.muted.set(video.muted);
+      this.theme.setPlayerMuted(video.muted);
     }
   }
 
@@ -267,37 +279,57 @@ export class PlayerPage implements OnDestroy {
   }
 
   setSubtitle(uuid: string): void {
+    this.activateSubtitle(uuid);
+    if (uuid !== 'off') {
+      const subtitle = this.subtitles().find((item) => item.uuid === uuid);
+      if (subtitle) {
+        this.theme.setSubtitlePreference(subtitle.language, subtitle.uuid);
+        this.persistAccessibility();
+      }
+    }
+  }
+
+  private activateSubtitle(uuid: string): void {
     this.activeSub.set(uuid);
     const video = this.element();
     if (!video) {
       return;
     }
+    if (this.activeTrack) {
+      this.activeTrack.removeEventListener('cuechange', this.onCueChange);
+      this.activeTrack = null;
+    }
     const tracks = video.textTracks;
     for (let i = 0; i < tracks.length; i++) {
-      const matches = uuid !== 'off' && this.subtitles()[i]?.uuid === uuid;
-      tracks[i].mode = matches ? 'showing' : 'hidden';
-      if (matches) {
-        this.liftCues(tracks[i]);
+      tracks[i].mode = 'hidden';
+      if (uuid !== 'off' && this.subtitles()[i]?.uuid === uuid) {
+        this.activeTrack = tracks[i];
       }
+    }
+    if (this.activeTrack) {
+      this.activeTrack.addEventListener('cuechange', this.onCueChange);
+      this.applyOffset(this.activeTrack);
+    }
+    this.onCueChange();
+  }
+
+  private autoSelectSubtitle(items: Subtitle[]): void {
+    if (this.activeSub() !== 'off') {
+      return;
+    }
+    const preferred = items.find((item) => item.uuid === this.theme.subtitleUuid())
+      ?? items.find((item) => item.language === this.theme.subtitleLanguage());
+    if (preferred) {
+      setTimeout(() => this.activateSubtitle(preferred.uuid));
     }
   }
 
   onTrackLoad(event: Event): void {
     const track = (event.target as HTMLTrackElement).track;
     if (track) {
-      this.liftCues(track);
-    }
-  }
-
-  private applyCueLine(): void {
-    const video = this.element();
-    if (!video) {
-      return;
-    }
-    const tracks = video.textTracks;
-    for (let i = 0; i < tracks.length; i++) {
-      if (tracks[i].mode === 'showing') {
-        this.liftCues(tracks[i]);
+      this.applyOffset(track);
+      if (track === this.activeTrack) {
+        this.onCueChange();
       }
     }
   }
@@ -313,19 +345,17 @@ export class PlayerPage implements OnDestroy {
     }
     this.showSettings.set(false);
     this.syncMode.set(true);
-    this.applyCueLine();
     this.wake();
   }
 
   closeSync(): void {
     this.syncMode.set(false);
-    this.applyCueLine();
     this.wake();
   }
 
   setOffset(event: Event): void {
     this.subOffset.set(Math.round(Number((event.target as HTMLInputElement).value) * 10) / 10);
-    this.applyCueLine();
+    this.applyActiveOffset();
   }
 
   offsetText(): string {
@@ -336,7 +366,7 @@ export class PlayerPage implements OnDestroy {
   nudgeOffset(delta: number): void {
     const max = this.duration() || 600;
     this.subOffset.update((value) => Math.round(Math.min(max, Math.max(-max, value + delta)) * 10) / 10);
-    this.applyCueLine();
+    this.applyActiveOffset();
   }
 
   syncHere(): void {
@@ -344,14 +374,7 @@ export class PlayerPage implements OnDestroy {
     if (!video) {
       return;
     }
-    let cues: TextTrackCueList | null = null;
-    const tracks = video.textTracks;
-    for (let i = 0; i < tracks.length; i++) {
-      if (tracks[i].mode === 'showing') {
-        cues = tracks[i].cues;
-        break;
-      }
-    }
+    const cues = this.activeTrack?.cues ?? null;
     if (!cues || cues.length === 0) {
       return;
     }
@@ -370,32 +393,24 @@ export class PlayerPage implements OnDestroy {
     }
     if (bestOrigin !== null) {
       this.subOffset.set(Math.round((now - bestOrigin) * 10) / 10);
-      this.applyCueLine();
+      this.applyActiveOffset();
     }
   }
 
-  private cueLine(): number {
-    if (!this.syncMode()) {
-      return this.idle() ? 90 : 80;
+  private applyActiveOffset(): void {
+    if (this.activeTrack) {
+      this.applyOffset(this.activeTrack);
     }
-    const height = this.element()?.clientHeight || window.innerHeight || 0;
-    if (height <= 0) {
-      return 60;
-    }
-    return Math.max(12, Math.min(60, ((height - 340) / height) * 100));
   }
 
-  private liftCues(track: TextTrack): void {
+  private applyOffset(track: TextTrack): void {
     const cues = track.cues;
     if (!cues) {
       return;
     }
-    const line = this.cueLine();
     const offset = this.subOffset();
     for (let i = 0; i < cues.length; i++) {
       const cue = cues[i] as VTTCue & { vbStart?: number; vbEnd?: number };
-      cue.snapToLines = false;
-      cue.line = line;
       if (cue.vbStart === undefined) {
         cue.vbStart = cue.startTime;
         cue.vbEnd = cue.endTime;
@@ -519,11 +534,6 @@ export class PlayerPage implements OnDestroy {
     this.isFullscreen.set(!!document.fullscreenElement);
   }
 
-  @HostListener('window:resize')
-  onResize(): void {
-    this.applyCueLine();
-  }
-
   close(): void {
     this.saveProgress(false);
     this.router.navigate(['/movie', this.movieId]);
@@ -581,6 +591,7 @@ export class PlayerPage implements OnDestroy {
     clearInterval(this.saveTimer);
     clearTimeout(this.idleTimer);
     clearTimeout(this.tapTimer);
+    this.activeTrack?.removeEventListener('cuechange', this.onCueChange);
     this.saveProgress(false);
   }
 
@@ -614,7 +625,10 @@ export class PlayerPage implements OnDestroy {
 
   private loadSubtitles(movieId: string): void {
     this.subtitleService.listForMovie(movieId).subscribe({
-      next: (response) => this.subtitles.set(response.items),
+      next: (response) => {
+        this.subtitles.set(response.items);
+        this.autoSelectSubtitle(response.items);
+      },
       error: () => this.subtitles.set([]),
     });
   }

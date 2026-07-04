@@ -7,6 +7,8 @@ export interface AccessibilitySettings {
   big_subtitles?: boolean;
   subtitle_size?: 'sm' | 'md' | 'lg';
   subtitle_background?: boolean;
+  subtitle_language?: string;
+  subtitle_uuid?: string;
 }
 
 export interface AuthUser {

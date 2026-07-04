@@ -22,6 +22,10 @@ export class ThemeService {
   readonly bigSubtitles = signal<boolean>(this.read('vb-bigsubs', 'false') === 'true');
   readonly subtitleSize = signal<SubtitleSize>(this.read('vb-subsize', 'md') as SubtitleSize);
   readonly subtitleBackground = signal<boolean>(this.read('vb-subbg', 'true') === 'true');
+  readonly subtitleLanguage = signal<string>(this.read('vb-sublang', ''));
+  readonly subtitleUuid = signal<string>(this.read('vb-subuuid', ''));
+  readonly playerVolume = signal<number>(this.readVolume());
+  readonly playerMuted = signal<boolean>(this.read('vb-muted', 'false') === 'true');
 
   init(): void {
     this.applyTheme();
@@ -96,6 +100,29 @@ export class ThemeService {
     this.persist('vb-subbg', String(value));
   }
 
+  setSubtitlePreference(language: string, uuid: string): void {
+    this.subtitleLanguage.set(language);
+    this.subtitleUuid.set(uuid);
+    this.persist('vb-sublang', language);
+    this.persist('vb-subuuid', uuid);
+  }
+
+  setPlayerVolume(value: number): void {
+    this.playerVolume.set(value);
+    this.persist('vb-volume', String(value));
+  }
+
+  setPlayerMuted(value: boolean): void {
+    this.playerMuted.set(value);
+    this.persist('vb-muted', String(value));
+  }
+
+  private readVolume(): number {
+    const value = Number(this.read('vb-volume', '1'));
+
+    return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1;
+  }
+
   applySettings(settings: AccessibilitySettings | null | undefined): void {
     if (!settings) {
       return;
@@ -119,6 +146,9 @@ export class ThemeService {
     if (settings.subtitle_background !== undefined) {
       this.setSubtitleBackground(settings.subtitle_background);
     }
+    if (settings.subtitle_language !== undefined && settings.subtitle_uuid !== undefined) {
+      this.setSubtitlePreference(settings.subtitle_language, settings.subtitle_uuid);
+    }
   }
 
   currentSettings(): AccessibilitySettings {
@@ -129,6 +159,8 @@ export class ThemeService {
       big_subtitles: this.bigSubtitles(),
       subtitle_size: this.subtitleSize(),
       subtitle_background: this.subtitleBackground(),
+      subtitle_language: this.subtitleLanguage(),
+      subtitle_uuid: this.subtitleUuid(),
     };
   }
 

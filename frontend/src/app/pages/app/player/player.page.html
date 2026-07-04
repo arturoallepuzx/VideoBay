@@ -6,7 +6,7 @@
 } @else if (movie(); as m) {
   <div class="player" [class.is-idle]="idle()"
     [class.subs--sm]="theme.subtitleSize() === 'sm'" [class.subs--lg]="theme.subtitleSize() === 'lg'"
-    [class.subs--bg]="theme.subtitleBackground()"
+    [class.subs--bg]="theme.subtitleBackground()" [class.subs-sync]="syncMode()"
     (mousemove)="wake($event)">
     <div class="player__video" (click)="onVideoTap($event)">
       <video #video [src]="streamUrl()" crossorigin="use-credentials" autoplay playsinline
@@ -20,6 +20,10 @@
             [srclang]="subtitle.language" [label]="subtitle.label" (load)="onTrackLoad($event)" />
         }
       </video>
+
+      @if (cueText()) {
+        <div class="player__subs"><span>{{ cueText() }}</span></div>
+      }
 
       @if (buffering()) {
         <div class="player__spinner" aria-label="Cargando"></div>

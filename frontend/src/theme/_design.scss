@@ -1431,13 +1431,30 @@ img { display: block; max-width: 100%; }
   margin-left: 8px;
 }
 
-.player video::cue {
-  background: transparent;
+.player__subs {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18%;
+  text-align: center;
+  white-space: pre-line;
+  color: #fff;
+  font-family: sans-serif;
+  font-size: 5vh;
   line-height: normal;
+  pointer-events: none;
 }
-.player.subs--bg video::cue { background: rgba(0, 0, 0, 0.72); }
-.player.subs--sm video::cue { font-size: 75%; }
-.player.subs--lg video::cue { font-size: 150%; }
+.player__subs span {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.player.subs--sm .player__subs { font-size: 3.75vh; }
+.player.subs--lg .player__subs { font-size: 7.5vh; }
+.player.is-idle .player__subs { bottom: 10%; }
+.player.subs-sync .player__subs { bottom: clamp(34%, calc(340px - 6vh), 82%); }
+.player.subs-sync.subs--sm .player__subs { bottom: clamp(35.5%, calc(340px - 4.5vh), 83.5%); }
+.player.subs-sync.subs--lg .player__subs { bottom: clamp(31%, calc(340px - 9vh), 79%); }
+.player.subs--bg .player__subs span { background: rgba(0, 0, 0, 0.72); }
 
 .sub-preview {
   height: 150px;
