@@ -22,7 +22,7 @@ export class ThemeService {
   readonly bigSubtitles = signal<boolean>(this.read('vb-bigsubs', 'false') === 'true');
   readonly subtitleSize = signal<SubtitleSize>(this.read('vb-subsize', 'md') as SubtitleSize);
   readonly subtitleBackground = signal<boolean>(this.read('vb-subbg', 'true') === 'true');
-  readonly subtitleLanguage = signal<string>(this.read('vb-sublang', ''));
+  readonly subtitleLanguage = signal<string>(this.read('vb-sublang', '') || 'es');
   readonly subtitleUuid = signal<string>(this.read('vb-subuuid', ''));
   readonly playerVolume = signal<number>(this.readVolume());
   readonly playerMuted = signal<boolean>(this.read('vb-muted', 'false') === 'true');
@@ -146,7 +146,7 @@ export class ThemeService {
     if (settings.subtitle_background !== undefined) {
       this.setSubtitleBackground(settings.subtitle_background);
     }
-    if (settings.subtitle_language !== undefined && settings.subtitle_uuid !== undefined) {
+    if (settings.subtitle_language && settings.subtitle_uuid !== undefined) {
       this.setSubtitlePreference(settings.subtitle_language, settings.subtitle_uuid);
     }
   }
