@@ -22,6 +22,15 @@ videobay.dev, www.videobay.dev {
 
     handle {
         root * /srv/frontend
+
+        header Cache-Control "no-cache"
+
+        @hashed {
+            path *.js *.css /media/*
+            not path /ngsw-worker.js /assets/*
+        }
+        header @hashed Cache-Control "public, max-age=31536000, immutable"
+
         try_files {path} /index.html
         file_server
         encode gzip zstd

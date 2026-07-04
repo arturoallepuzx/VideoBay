@@ -14,6 +14,7 @@ import { LogoComponent } from './components/logo/logo.component';
 import { ThemeService } from './services/theme/theme.service';
 import { AuthService } from './services/auth/auth.service';
 import { LoadingService } from './services/loading/loading.service';
+import { UpdateService } from './services/update/update.service';
 
 @Component({
   selector: 'app-root',
@@ -39,6 +40,7 @@ export class AppComponent {
   private readonly notifications = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly theme = inject(ThemeService);
+  private readonly updates = inject(UpdateService);
   protected readonly loading = inject(LoadingService);
 
   private readonly url = signal(this.router.url);
@@ -50,6 +52,7 @@ export class AppComponent {
 
   constructor() {
     this.theme.init();
+    this.updates.init();
     this.auth.ensureSession().subscribe();
 
     effect(() => {
