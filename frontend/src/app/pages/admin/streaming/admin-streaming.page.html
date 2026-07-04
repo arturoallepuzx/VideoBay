@@ -4,8 +4,11 @@
     <div class="eyebrow">● ADMIN · STREAMING</div>
     <h1 class="h-section" style="margin-top:6px;margin-bottom:20px">Archivos de vídeo</h1>
 
-    <div style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">
       <button class="btn btn--primary" (click)="toggleAdd()"><ion-icon name="cloud-upload-outline"></ion-icon> Añadir vídeo</button>
+      @if (total()) {
+        <span class="mono tiny muted">{{ total() }} vídeos</span>
+      }
     </div>
 
     @if (showAdd()) {
@@ -123,12 +126,12 @@
         </table>
       </div>
 
-      <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
-        <span class="mono tiny muted">{{ total() }} vídeos</span>
-        @if (page() < totalPages()) {
-          <button class="btn" [disabled]="loading()" (click)="loadMore()">Cargar más</button>
-        }
-      </div>
+      @if (page() < totalPages()) {
+        <div vbInfiniteScroll (reached)="loadMore()" style="height:1px"></div>
+      }
+      @if (loading() && videos().length) {
+        <div class="mono tiny" style="text-align:center;padding:24px;color:var(--text-3)">Cargando más…</div>
+      }
     } @else if (!loading()) {
       <p class="muted body">No hay vídeos registrados todavía.</p>
     }

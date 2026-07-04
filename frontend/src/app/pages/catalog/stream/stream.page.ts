@@ -18,6 +18,7 @@ import { WishlistService } from '../../../services/wishlist/wishlist.service';
 export class StreamPage {
 
   protected readonly movies = signal<MovieCard[]>([]);
+  protected readonly total = signal(0);
   protected readonly loaded = signal(false);
   protected readonly loadingMore = signal(false);
   protected readonly skeletons = Array.from({ length: 12 });
@@ -43,11 +44,13 @@ export class StreamPage {
     this.catalog.listStreamable({ sort: this.sort, page: 1, per_page: 24 }).subscribe({
       next: (page) => {
         this.movies.set(page.items);
+        this.total.set(page.total);
         this.totalPages.set(page.total_pages);
         this.loaded.set(true);
       },
       error: () => {
         this.movies.set([]);
+        this.total.set(0);
         this.loaded.set(true);
       },
     });
@@ -65,6 +68,7 @@ export class StreamPage {
       next: (page) => {
         this.movies.update((current) => [...current, ...page.items]);
         this.page.set(next);
+        this.total.set(page.total);
         this.totalPages.set(page.total_pages);
         this.loadingMore.set(false);
       },

@@ -2344,6 +2344,8 @@ img { display: block; max-width: 100%; }
     padding-top: 0;
   }
   .app--chrome .tabs { position: static; }
+  .app--chrome .topnav,
+  .app--chrome .tabs { touch-action: none; }
   .page { padding: 20px 16px 24px; }
 
   .app--chrome .main,

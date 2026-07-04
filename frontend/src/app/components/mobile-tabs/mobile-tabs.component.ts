@@ -11,8 +11,8 @@ import { IonIcon } from '@ionic/angular/standalone';
       <a class="tabs__btn" routerLink="/home" routerLinkActive="is-active">
         <ion-icon name="home-outline"></ion-icon><span>Inicio</span>
       </a>
-      <a class="tabs__btn" routerLink="/marketplace" routerLinkActive="is-active">
-        <ion-icon name="cube-outline"></ion-icon><span>Tienda</span>
+      <a class="tabs__btn" routerLink="/stream" routerLinkActive="is-active">
+        <ion-icon name="play"></ion-icon><span>Stream</span>
       </a>
       <a class="tabs__btn" routerLink="/search" routerLinkActive="is-active">
         <ion-icon name="search-outline"></ion-icon><span>Buscar</span>

@@ -17,7 +17,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end">
         <span class="mono tiny" style="color:var(--text-3)">
-          @if (loaded()) { {{ movies().length }} títulos } @else { Cargando… }
+          @if (loaded()) { {{ total() }} títulos } @else { Cargando… }
         </span>
         <select class="field__select" [(ngModel)]="sort" (ngModelChange)="load()">
           <option value="rating">Mejor valoradas</option>

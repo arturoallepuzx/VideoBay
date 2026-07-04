@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { IonIcon } from '@ionic/angular/standalone';
 import { AdminSidebarComponent } from '../../../components/admin-sidebar/admin-sidebar.component';
+import { InfiniteScrollDirective } from '../../../components/infinite-scroll/infinite-scroll.directive';
 import { MoviePickerComponent } from '../../../components/movie-picker/movie-picker.component';
 import { StreamingService } from '../../../services/streaming/streaming.service';
 import { MovieRefPayload, VideoFile, VideoSourceFile } from '../../../services/streaming/streaming.models';
@@ -15,7 +16,7 @@ type AddMode = 'upload' | 'register' | 'transcode';
 
 @Component({
   selector: 'app-admin-streaming',
-  imports: [DatePipe, FormsModule, IonIcon, AdminSidebarComponent, MoviePickerComponent, TmdbImagePipe],
+  imports: [DatePipe, FormsModule, IonIcon, AdminSidebarComponent, InfiniteScrollDirective, MoviePickerComponent, TmdbImagePipe],
   templateUrl: 'admin-streaming.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -196,7 +197,7 @@ export class AdminStreamingPage {
   }
 
   protected loadMore(): void {
-    if (this.page() < this.totalPages()) {
+    if (!this.loading() && this.page() < this.totalPages()) {
       this.page.update((value) => value + 1);
       this.load(false);
     }
