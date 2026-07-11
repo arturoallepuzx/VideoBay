@@ -81,9 +81,9 @@ abstract class AbstractEloquentMovieCatalogFinder
     private function applySort(Builder $query, MovieCatalogCriteria $criteria): Builder
     {
         return match ($criteria->sort()) {
-            MovieCatalogCriteria::SORT_TITLE => $query->orderBy('title'),
-            MovieCatalogCriteria::SORT_RATING => $query->orderByDesc('tmdb_rating'),
-            default => $query->orderByDesc('created_at'),
+            MovieCatalogCriteria::SORT_TITLE => $query->orderBy('title')->orderBy('id'),
+            MovieCatalogCriteria::SORT_RATING => $query->orderByDesc('tmdb_rating')->orderBy('id'),
+            default => $query->orderByDesc('created_at')->orderBy('id'),
         };
     }
 
