@@ -8,6 +8,7 @@ services:
       - /mnt/videobay_media:/mnt/videobay_media
       - /mnt/videobay_media2:/mnt/videobay_media2
       - /mnt/videobay_media3:/mnt/videobay_media3
+      - /mnt/videobay_media4:/mnt/videobay_media4
 
   worker:
     restart: unless-stopped
@@ -16,6 +17,7 @@ services:
       - /mnt/videobay_media:/mnt/videobay_media
       - /mnt/videobay_media2:/mnt/videobay_media2
       - /mnt/videobay_media3:/mnt/videobay_media3
+      - /mnt/videobay_media4:/mnt/videobay_media4
 
   scheduler:
     restart: unless-stopped
@@ -24,6 +26,7 @@ services:
       - /mnt/videobay_media:/mnt/videobay_media
       - /mnt/videobay_media2:/mnt/videobay_media2
       - /mnt/videobay_media3:/mnt/videobay_media3
+      - /mnt/videobay_media4:/mnt/videobay_media4
 
   frontend:
     ports: []
