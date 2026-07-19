@@ -1028,26 +1028,6 @@ img { display: block; max-width: 100%; }
   cursor: pointer;
   overflow: hidden;
 }
-.player__video::after {
-  /* Mock film grain texture */
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(circle at 30% 40%, rgba(255,45,45,0.08), transparent 50%),
-    radial-gradient(circle at 70% 60%, rgba(80,30,200,0.06), transparent 60%);
-  pointer-events: none;
-}
-.player__mock-frame {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-size: cover;
-  background-position: center;
-  filter: brightness(0.9);
-}
 .player__top {
   position: absolute;
   top: 0; left: 0; right: 0;
