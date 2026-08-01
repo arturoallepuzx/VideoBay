@@ -20,6 +20,7 @@ class EloquentVideoFile extends Model
         'original_format',
         'original_path',
         'processed_path',
+        'storage_disk',
         'mime_type',
         'duration_seconds',
         'file_size_bytes',

@@ -10,14 +10,14 @@ use App\Streaming\Domain\Entity\VideoFile;
 use App\Streaming\Domain\Interfaces\MovieResolverForStreamingInterface;
 use App\Streaming\Domain\Interfaces\TranscodingJobDispatcherInterface;
 use App\Streaming\Domain\Interfaces\VideoFileRepositoryInterface;
-use App\Streaming\Domain\Interfaces\VideoFileStorageInterface;
+use App\Streaming\Domain\Interfaces\VideoTranscodeStorageInterface;
 use App\Streaming\Domain\ValueObject\VideoFileProcessingStatus;
 
 class UploadVideoFile
 {
     public function __construct(
         private VideoFileRepositoryInterface $videoFileRepository,
-        private VideoFileStorageInterface $storage,
+        private VideoTranscodeStorageInterface $storage,
         private MovieResolverForStreamingInterface $movieResolver,
         private TranscodingJobDispatcherInterface $transcodingJobDispatcher,
         private TransactionRunnerInterface $transactionRunner,
@@ -35,7 +35,7 @@ class UploadVideoFile
 
         $id = Uuid::generate();
         $ext = strtolower(pathinfo($originalFilename, PATHINFO_EXTENSION));
-        $targetPath = $this->storage->absolutePathInOriginals($id->value().'.'.$ext);
+        $targetLocation = $this->storage->locationForOriginal($id->value().'.'.$ext);
 
         $videoFile = $this->transactionRunner->run(function () use (
             $id,
@@ -43,23 +43,21 @@ class UploadVideoFile
             $originalFilename,
             $ext,
             $temporaryUploadedPath,
-            $targetPath,
+            $targetLocation,
         ): VideoFile {
             $videoFile = VideoFile::dddCreate(
                 $id,
                 $movieId,
                 $originalFilename,
                 $ext,
-                $targetPath,
-                null,
-                null,
+                $targetLocation,
                 null,
                 null,
                 VideoFileProcessingStatus::pending(),
             );
 
             $this->videoFileRepository->create($videoFile);
-            $this->storage->moveUploadedTo($temporaryUploadedPath, $targetPath);
+            $this->storage->store($temporaryUploadedPath, $targetLocation);
 
             return $videoFile;
         });

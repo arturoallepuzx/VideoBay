@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Streaming\Infrastructure\Services;
 
-use App\Streaming\Domain\Exception\InvalidVideoFormatException;
 use App\Streaming\Domain\Exception\TranscodingFailedException;
 use App\Streaming\Domain\Interfaces\VideoTranscoderInterface;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -18,50 +17,6 @@ class FfmpegVideoTranscoder implements VideoTranscoderInterface
         private string $preset,
         private int $crf,
     ) {}
-
-    public function probe(string $absolutePath): array
-    {
-        $ffprobe = dirname($this->ffmpegBinary).'/ffprobe';
-
-        $process = new Process([
-            $ffprobe,
-            '-v', 'error',
-            '-show_entries', 'format=duration,size:stream=codec_type,tags',
-            '-of', 'json',
-            $absolutePath,
-        ]);
-
-        $process->run();
-
-        if (! $process->isSuccessful()) {
-            if (! file_exists($ffprobe)) {
-                throw new \RuntimeException(
-                    sprintf('ffprobe binary not found at "%s". Check FFMPEG_BINARY config.', $ffprobe)
-                );
-            }
-
-            throw InvalidVideoFormatException::forFile($absolutePath, trim($process->getErrorOutput()));
-        }
-
-        $data = json_decode($process->getOutput(), true);
-
-        $durationSeconds = (int) round((float) ($data['format']['duration'] ?? 0));
-        $fileSizeBytes = (int) ($data['format']['size'] ?? 0);
-
-        $audioLanguage = null;
-        foreach ($data['streams'] ?? [] as $stream) {
-            if (($stream['codec_type'] ?? '') === 'audio') {
-                $audioLanguage = $stream['tags']['language'] ?? null;
-                break;
-            }
-        }
-
-        return [
-            'duration_seconds' => $durationSeconds,
-            'file_size_bytes' => $fileSizeBytes,
-            'audio_language' => $audioLanguage,
-        ];
-    }
 
     public function transcodeToMp4(string $inputAbsolutePath, string $outputAbsolutePath): void
     {

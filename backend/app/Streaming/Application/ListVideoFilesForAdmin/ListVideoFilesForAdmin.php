@@ -8,6 +8,7 @@ use App\Shared\Domain\ValueObject\Uuid;
 use App\Streaming\Domain\Entity\VideoFile;
 use App\Streaming\Domain\Interfaces\MovieSummaryResolverInterface;
 use App\Streaming\Domain\Interfaces\VideoFileRepositoryInterface;
+use App\Streaming\Domain\ValueObject\StoragePrice;
 
 class ListVideoFilesForAdmin
 {
@@ -18,6 +19,7 @@ class ListVideoFilesForAdmin
     public function __construct(
         private VideoFileRepositoryInterface $videoFileRepository,
         private MovieSummaryResolverInterface $movieSummaryResolver,
+        private ?StoragePrice $storagePrice,
     ) {}
 
     public function __invoke(int $page, int $perPage): ListVideoFilesForAdminResponse
@@ -28,7 +30,7 @@ class ListVideoFilesForAdmin
         $result = $this->videoFileRepository->listForAdmin($page, $perPage);
         $movieSummaries = $this->movieSummaryResolver->resolveMany($this->movieIds($result['items']));
 
-        return ListVideoFilesForAdminResponse::create($result, $movieSummaries);
+        return ListVideoFilesForAdminResponse::create($result, $movieSummaries, $this->storagePrice);
     }
 
     /**

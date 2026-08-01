@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Streaming\Application\ListPendingVideoFiles;
 
+use App\Streaming\Domain\ValueObject\StorageDisk;
+use App\Streaming\Domain\ValueObject\StoredObject;
+
 final readonly class ListPendingVideoFilesResponse
 {
     /**
@@ -13,23 +16,25 @@ final readonly class ListPendingVideoFilesResponse
     private function __construct(
         public array $rootFiles,
         public array $originalsFiles,
+        public string $ingestionDisk,
     ) {}
 
     /**
-     * @param  list<array{filename: string, size_bytes: int, modified_at: \DateTimeImmutable}>  $root
-     * @param  list<array{filename: string, size_bytes: int, modified_at: \DateTimeImmutable}>  $originals
+     * @param  list<StoredObject>  $root
+     * @param  list<StoredObject>  $originals
      */
-    public static function create(array $root, array $originals): self
+    public static function create(array $root, array $originals, StorageDisk $ingestionDisk): self
     {
-        $format = fn (array $f): array => [
-            'filename' => $f['filename'],
-            'size_bytes' => $f['size_bytes'],
-            'modified_at' => $f['modified_at']->format(\DateTimeInterface::ATOM),
+        $format = fn (StoredObject $object): array => [
+            'filename' => $object->name(),
+            'size_bytes' => $object->sizeBytes(),
+            'modified_at' => $object->modifiedAt()->format(\DateTimeInterface::ATOM),
         ];
 
         return new self(
             rootFiles: array_map($format, $root),
             originalsFiles: array_map($format, $originals),
+            ingestionDisk: $ingestionDisk->value(),
         );
     }
 
@@ -39,6 +44,7 @@ final readonly class ListPendingVideoFilesResponse
         return [
             'root' => $this->rootFiles,
             'originals' => $this->originalsFiles,
+            'ingestion_disk' => $this->ingestionDisk,
         ];
     }
 }

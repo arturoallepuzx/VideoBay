@@ -9,12 +9,14 @@ services:
       - media_data:/var/lib/videobay
     env_file:
       - backend/.env
+    environment:
+      PHP_CLI_SERVER_WORKERS: 10
     ports:
       - "8000:8000"
     depends_on:
       - db
       - redis
-    command: php artisan serve --host=0.0.0.0 --port=8000
+    command: php artisan serve --host=0.0.0.0 --port=8000 --no-reload
 
   worker:
     build: ./docker/php
@@ -28,6 +30,20 @@ services:
     depends_on:
       - api
     command: php artisan queue:work redis_transcoding --queue=transcoding --tries=1 --timeout=86400
+
+  storage_worker:
+    build: ./docker/php
+    working_dir: /var/www
+    deploy:
+      replicas: 4
+    volumes:
+      - ./backend:/var/www
+      - media_data:/var/lib/videobay
+    env_file:
+      - backend/.env
+    depends_on:
+      - api
+    command: php artisan queue:work redis_storage --queue=storage
 
   scheduler:
     build: ./docker/php

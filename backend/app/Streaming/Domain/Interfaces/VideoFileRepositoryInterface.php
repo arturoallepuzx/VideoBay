@@ -7,6 +7,7 @@ namespace App\Streaming\Domain\Interfaces;
 use App\Shared\Domain\ValueObject\DomainDateTime;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\Streaming\Domain\Entity\VideoFile;
+use App\Streaming\Domain\ValueObject\DiskUsage;
 
 interface VideoFileRepositoryInterface
 {
@@ -29,4 +30,7 @@ interface VideoFileRepositoryInterface
 
     /** @return list<VideoFile> */
     public function findFailedOlderThan(DomainDateTime $threshold): array;
+
+    /** @return list<DiskUsage> */
+    public function sumUsageByDisk(): array;
 }

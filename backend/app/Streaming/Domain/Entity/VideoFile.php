@@ -6,7 +6,10 @@ namespace App\Streaming\Domain\Entity;
 
 use App\Shared\Domain\ValueObject\DomainDateTime;
 use App\Shared\Domain\ValueObject\Uuid;
+use App\Streaming\Domain\ValueObject\StorageDisk;
 use App\Streaming\Domain\ValueObject\VideoFileProcessingStatus;
+use App\Streaming\Domain\ValueObject\VideoLocation;
+use App\Streaming\Domain\ValueObject\VideoMetadata;
 
 class VideoFile
 {
@@ -17,11 +20,9 @@ class VideoFile
         private Uuid $movieId,
         private ?string $originalFilename,
         private ?string $originalFormat,
-        private ?string $originalPath,
-        private ?string $processedPath,
-        private ?int $durationSeconds,
-        private ?int $fileSizeBytes,
-        private ?string $audioLanguage,
+        private ?VideoLocation $originalLocation,
+        private ?VideoLocation $processedLocation,
+        private ?VideoMetadata $metadata,
         private VideoFileProcessingStatus $processingStatus,
         private ?string $processingError,
         private DomainDateTime $createdAt,
@@ -34,19 +35,17 @@ class VideoFile
         Uuid $movieId,
         ?string $originalFilename,
         ?string $originalFormat,
-        ?string $originalPath,
-        ?string $processedPath,
-        ?int $durationSeconds,
-        ?int $fileSizeBytes,
-        ?string $audioLanguage,
+        ?VideoLocation $originalLocation,
+        ?VideoLocation $processedLocation,
+        ?VideoMetadata $metadata,
         VideoFileProcessingStatus $status,
     ): self {
-        if ($status->isReady() && ($processedPath === null || $durationSeconds === null || $fileSizeBytes === null)) {
-            throw new \InvalidArgumentException('A ready video file must have processed_path, duration_seconds and file_size_bytes.');
+        if ($status->isReady() && ($processedLocation === null || $metadata === null)) {
+            throw new \InvalidArgumentException('A ready video file must have processed_path and metadata.');
         }
 
-        if ($status->isPending() && $originalPath === null) {
-            throw new \InvalidArgumentException('A pending video file must have original_path.');
+        if (($status->isPending() || $status->isProcessing()) && $originalLocation === null) {
+            throw new \InvalidArgumentException('A pending or processing video file must have original_path.');
         }
 
         $now = DomainDateTime::now();
@@ -56,11 +55,9 @@ class VideoFile
             $movieId,
             $originalFilename,
             $originalFormat,
-            $originalPath,
-            $processedPath,
-            $durationSeconds,
-            $fileSizeBytes,
-            $audioLanguage,
+            $originalLocation,
+            $processedLocation,
+            $metadata,
             $status,
             null,
             $now,
@@ -76,6 +73,7 @@ class VideoFile
         ?string $originalFormat,
         ?string $originalPath,
         ?string $processedPath,
+        string $storageDisk,
         ?int $durationSeconds,
         ?int $fileSizeBytes,
         ?string $audioLanguage,
@@ -90,11 +88,11 @@ class VideoFile
             Uuid::create($movieId),
             $originalFilename,
             $originalFormat,
-            $originalPath,
-            $processedPath,
-            $durationSeconds,
-            $fileSizeBytes,
-            $audioLanguage,
+            $originalPath !== null ? VideoLocation::create(StorageDisk::create($storageDisk), $originalPath) : null,
+            $processedPath !== null ? VideoLocation::create(StorageDisk::create($storageDisk), $processedPath) : null,
+            $durationSeconds !== null && $fileSizeBytes !== null
+                ? VideoMetadata::create($durationSeconds, $fileSizeBytes, $audioLanguage)
+                : null,
             VideoFileProcessingStatus::create($processingStatus),
             $processingError,
             DomainDateTime::create($createdAt),
@@ -109,19 +107,17 @@ class VideoFile
         $this->touch();
     }
 
-    public function markReady(string $processedPath, int $durationSeconds, int $fileSizeBytes, ?string $audioLanguage): void
+    public function markReady(VideoLocation $processedLocation, VideoMetadata $metadata): void
     {
-        $this->processedPath = $processedPath;
-        $this->durationSeconds = $durationSeconds;
-        $this->fileSizeBytes = $fileSizeBytes;
-        $this->audioLanguage = $audioLanguage;
+        $this->processedLocation = $processedLocation;
+        $this->metadata = $metadata;
         $this->processingStatus = VideoFileProcessingStatus::ready();
         $this->touch();
     }
 
     public function clearOriginalReference(): void
     {
-        $this->originalPath = null;
+        $this->originalLocation = null;
         $this->touch();
     }
 
@@ -183,29 +179,19 @@ class VideoFile
         return $this->originalFormat;
     }
 
-    public function originalPath(): ?string
+    public function originalLocation(): ?VideoLocation
     {
-        return $this->originalPath;
+        return $this->originalLocation;
     }
 
-    public function processedPath(): ?string
+    public function processedLocation(): ?VideoLocation
     {
-        return $this->processedPath;
+        return $this->processedLocation;
     }
 
-    public function durationSeconds(): ?int
+    public function metadata(): ?VideoMetadata
     {
-        return $this->durationSeconds;
-    }
-
-    public function fileSizeBytes(): ?int
-    {
-        return $this->fileSizeBytes;
-    }
-
-    public function audioLanguage(): ?string
-    {
-        return $this->audioLanguage;
+        return $this->metadata;
     }
 
     public function processingStatus(): VideoFileProcessingStatus

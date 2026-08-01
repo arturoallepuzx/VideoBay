@@ -101,23 +101,38 @@ use App\Shared\Infrastructure\Services\ConfigSystemCurrencyProvider;
 use App\Shared\Infrastructure\Services\LaravelDomainEventDispatcher;
 use App\Shared\Infrastructure\Services\LaravelTransactionRunner;
 use App\Streaming\Application\CleanupFailedOriginals\CleanupFailedOriginals;
+use App\Streaming\Application\GetStorageUsage\GetStorageUsage;
+use App\Streaming\Application\ListPendingVideoFiles\ListPendingVideoFiles;
+use App\Streaming\Application\ListVideoFilesForAdmin\ListVideoFilesForAdmin;
 use App\Streaming\Application\TranscodeVideo\TranscodeVideo;
 use App\Streaming\Domain\Event\VideoFileReady;
 use App\Streaming\Domain\Interfaces\MovieResolverForStreamingInterface;
 use App\Streaming\Domain\Interfaces\MovieSummaryResolverInterface;
 use App\Streaming\Domain\Interfaces\PlaybackProgressRepositoryInterface;
 use App\Streaming\Domain\Interfaces\TranscodingJobDispatcherInterface;
+use App\Streaming\Domain\Interfaces\VideoFileRegistrationJobDispatcherInterface;
 use App\Streaming\Domain\Interfaces\VideoFileRepositoryInterface;
 use App\Streaming\Domain\Interfaces\VideoFileStorageInterface;
+use App\Streaming\Domain\Interfaces\VideoMetadataProbeInterface;
 use App\Streaming\Domain\Interfaces\VideoTranscoderInterface;
+use App\Streaming\Domain\Interfaces\VideoTranscodeStorageInterface;
+use App\Streaming\Domain\ValueObject\StorageDisk;
+use App\Streaming\Domain\ValueObject\StoragePrice;
 use App\Streaming\Infrastructure\Console\CleanupFailedOriginalsCommand;
 use App\Streaming\Infrastructure\Persistence\Repositories\EloquentPlaybackProgressRepository;
 use App\Streaming\Infrastructure\Persistence\Repositories\EloquentVideoFileRepository;
 use App\Streaming\Infrastructure\Services\CatalogMovieResolverForStreaming;
 use App\Streaming\Infrastructure\Services\CatalogMovieSummaryResolver;
 use App\Streaming\Infrastructure\Services\FfmpegVideoTranscoder;
+use App\Streaming\Infrastructure\Services\FfprobeMetadataReader;
 use App\Streaming\Infrastructure\Services\LaravelTranscodingJobDispatcher;
+use App\Streaming\Infrastructure\Services\LaravelVideoFileRegistrationJobDispatcher;
 use App\Streaming\Infrastructure\Services\LocalVideoFileStorage;
+use App\Streaming\Infrastructure\Services\LocalVideoMetadataProbe;
+use App\Streaming\Infrastructure\Services\RoutingVideoFileStorage;
+use App\Streaming\Infrastructure\Services\RoutingVideoMetadataProbe;
+use App\Streaming\Infrastructure\Services\S3VideoFileStorage;
+use App\Streaming\Infrastructure\Services\S3VideoMetadataProbe;
 use App\Subtitle\Domain\Event\SubtitleRemovedByModeration;
 use App\Subtitle\Domain\Interfaces\ExternalSubtitleProviderInterface;
 use App\Subtitle\Domain\Interfaces\SubtitleConverterInterface;
@@ -154,6 +169,7 @@ use App\Wishlist\Infrastructure\Persistence\Repositories\EloquentPinnedFavoriteR
 use App\Wishlist\Infrastructure\Persistence\Repositories\EloquentWatchLaterItemRepository;
 use App\Wishlist\Infrastructure\Persistence\Repositories\EloquentWishlistItemRepository;
 use App\Wishlist\Infrastructure\Services\CatalogMovieListItemResolver;
+use Aws\S3\S3Client;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Event;
@@ -304,12 +320,53 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(MovieResolverForStreamingInterface::class, CatalogMovieResolverForStreaming::class);
         $this->app->bind(MovieSummaryResolverInterface::class, CatalogMovieSummaryResolver::class);
         $this->app->bind(TranscodingJobDispatcherInterface::class, LaravelTranscodingJobDispatcher::class);
+        $this->app->bind(VideoFileRegistrationJobDispatcherInterface::class, LaravelVideoFileRegistrationJobDispatcher::class);
 
-        $this->app->scoped(VideoFileStorageInterface::class, function (): VideoFileStorageInterface {
+        $this->app->scoped(LocalVideoFileStorage::class, function (): LocalVideoFileStorage {
             return new LocalVideoFileStorage(
                 (string) config('streaming.videos_path'),
                 (string) config('streaming.originals_subdir'),
             );
+        });
+
+        $this->app->scoped(S3Client::class, function (): S3Client {
+            return new S3Client([
+                'version' => 'latest',
+                'region' => 'auto',
+                'endpoint' => 'https://'.((string) config('streaming.r2.account_id')).'.r2.cloudflarestorage.com',
+                'use_path_style_endpoint' => true,
+                'credentials' => [
+                    'key' => (string) config('streaming.r2.access_key_id'),
+                    'secret' => (string) config('streaming.r2.secret_access_key'),
+                ],
+            ]);
+        });
+
+        $this->app->scoped(S3VideoFileStorage::class, function ($app): S3VideoFileStorage {
+            return new S3VideoFileStorage(
+                $app->make(S3Client::class),
+                (string) config('streaming.r2.bucket'),
+                (string) config('streaming.r2.videos_prefix'),
+                (int) config('streaming.r2.copy_part_size'),
+                (int) config('streaming.r2.copy_multipart_threshold'),
+                (int) config('streaming.r2.copy_concurrency'),
+            );
+        });
+
+        $this->app->scoped(RoutingVideoFileStorage::class, function ($app): RoutingVideoFileStorage {
+            return new RoutingVideoFileStorage(
+                $app->make(LocalVideoFileStorage::class),
+                $app->make(S3VideoFileStorage::class),
+                StorageDisk::create((string) config('streaming.ingestion_disk')),
+            );
+        });
+
+        $this->app->scoped(VideoFileStorageInterface::class, function ($app): VideoFileStorageInterface {
+            return $app->make(RoutingVideoFileStorage::class);
+        });
+
+        $this->app->scoped(VideoTranscodeStorageInterface::class, function ($app): VideoTranscodeStorageInterface {
+            return $app->make(LocalVideoFileStorage::class);
         });
 
         $this->app->scoped(VideoTranscoderInterface::class, function (): VideoTranscoderInterface {
@@ -321,11 +378,62 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
+        $this->app->scoped(FfprobeMetadataReader::class, function (): FfprobeMetadataReader {
+            return new FfprobeMetadataReader(
+                (string) config('streaming.ffmpeg.binary'),
+                (int) config('streaming.ffmpeg.probe_timeout_seconds'),
+            );
+        });
+
+        $this->app->scoped(LocalVideoMetadataProbe::class, function ($app): LocalVideoMetadataProbe {
+            return new LocalVideoMetadataProbe($app->make(FfprobeMetadataReader::class));
+        });
+
+        $this->app->scoped(S3VideoMetadataProbe::class, function ($app): S3VideoMetadataProbe {
+            return new S3VideoMetadataProbe(
+                $app->make(S3Client::class),
+                (string) config('streaming.r2.bucket'),
+                (int) config('streaming.r2.probe_url_ttl_seconds'),
+                $app->make(FfprobeMetadataReader::class),
+            );
+        });
+
+        $this->app->scoped(VideoMetadataProbeInterface::class, function ($app): VideoMetadataProbeInterface {
+            return new RoutingVideoMetadataProbe(
+                $app->make(LocalVideoMetadataProbe::class),
+                $app->make(S3VideoMetadataProbe::class),
+            );
+        });
+
+        $this->app->bind(ListVideoFilesForAdmin::class, function ($app): ListVideoFilesForAdmin {
+            return new ListVideoFilesForAdmin(
+                $app->make(VideoFileRepositoryInterface::class),
+                $app->make(MovieSummaryResolverInterface::class),
+                $this->configuredStoragePrice(),
+            );
+        });
+
+        $this->app->bind(ListPendingVideoFiles::class, function ($app): ListPendingVideoFiles {
+            return new ListPendingVideoFiles(
+                $app->make(VideoFileStorageInterface::class),
+                $app->make(VideoTranscodeStorageInterface::class),
+                StorageDisk::create((string) config('streaming.ingestion_disk')),
+            );
+        });
+
+        $this->app->bind(GetStorageUsage::class, function ($app): GetStorageUsage {
+            return new GetStorageUsage(
+                $app->make(VideoFileRepositoryInterface::class),
+                $this->configuredStoragePrice(),
+            );
+        });
+
         $this->app->bind(TranscodeVideo::class, function ($app): TranscodeVideo {
             return new TranscodeVideo(
                 $app->make(VideoFileRepositoryInterface::class),
                 $app->make(VideoTranscoderInterface::class),
-                $app->make(VideoFileStorageInterface::class),
+                $app->make(VideoMetadataProbeInterface::class),
+                $app->make(VideoTranscodeStorageInterface::class),
                 $app->make(TransactionRunnerInterface::class),
                 $app->make(DomainEventDispatcherInterface::class),
                 (bool) config('streaming.keep_original_after_processing'),
@@ -335,7 +443,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(CleanupFailedOriginals::class, function ($app): CleanupFailedOriginals {
             return new CleanupFailedOriginals(
                 $app->make(VideoFileRepositoryInterface::class),
-                $app->make(VideoFileStorageInterface::class),
+                $app->make(VideoTranscodeStorageInterface::class),
                 $this->streamingCleanupFailedAfterDays(),
             );
         });
@@ -526,5 +634,19 @@ class AppServiceProvider extends ServiceProvider
         }
 
         return $days;
+    }
+
+    private function configuredStoragePrice(): ?StoragePrice
+    {
+        $price = config('streaming.r2.storage_price_per_gb_month');
+
+        if ($price === null || trim((string) $price) === '') {
+            return null;
+        }
+
+        return StoragePrice::create(
+            (float) $price,
+            (float) config('streaming.r2.storage_free_gigabytes'),
+        );
     }
 }

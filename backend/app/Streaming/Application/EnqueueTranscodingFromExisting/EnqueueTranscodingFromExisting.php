@@ -11,14 +11,14 @@ use App\Streaming\Domain\Exception\VideoFileNotFoundException;
 use App\Streaming\Domain\Interfaces\MovieResolverForStreamingInterface;
 use App\Streaming\Domain\Interfaces\TranscodingJobDispatcherInterface;
 use App\Streaming\Domain\Interfaces\VideoFileRepositoryInterface;
-use App\Streaming\Domain\Interfaces\VideoFileStorageInterface;
+use App\Streaming\Domain\Interfaces\VideoTranscodeStorageInterface;
 use App\Streaming\Domain\ValueObject\VideoFileProcessingStatus;
 
 class EnqueueTranscodingFromExisting
 {
     public function __construct(
         private VideoFileRepositoryInterface $videoFileRepository,
-        private VideoFileStorageInterface $storage,
+        private VideoTranscodeStorageInterface $storage,
         private MovieResolverForStreamingInterface $movieResolver,
         private TranscodingJobDispatcherInterface $transcodingJobDispatcher,
         private TransactionRunnerInterface $transactionRunner,
@@ -29,7 +29,9 @@ class EnqueueTranscodingFromExisting
         ?string $movieUuid,
         ?int $tmdbId,
     ): EnqueueTranscodingFromExistingResponse {
-        if (! $this->storage->existsInOriginals($sourceFilename)) {
+        $sourceLocation = $this->storage->locationForOriginal($sourceFilename);
+
+        if (! $this->storage->exists($sourceLocation)) {
             throw VideoFileNotFoundException::forSourcePath($sourceFilename);
         }
 
@@ -39,23 +41,22 @@ class EnqueueTranscodingFromExisting
 
         $id = Uuid::generate();
         $ext = strtolower(pathinfo($sourceFilename, PATHINFO_EXTENSION));
-        $sourcePath = $this->storage->absolutePathInOriginals($sourceFilename);
-        $targetPath = $this->storage->absolutePathInOriginals($id->value().'.'.$ext);
+        $originalLocation = $this->storage->locationForOriginal($id->value().'.'.$ext);
 
         $videoFile = $this->transactionRunner->run(function () use (
             $id,
             $movieId,
             $sourceFilename,
             $ext,
-            $sourcePath,
-            $targetPath,
+            $sourceLocation,
+            $originalLocation,
         ): VideoFile {
             $videoFile = VideoFile::dddCreate(
                 $id,
                 $movieId,
                 $sourceFilename,
                 $ext,
-                $targetPath,
+                $originalLocation,
                 null,
                 null,
                 null,
@@ -64,7 +65,7 @@ class EnqueueTranscodingFromExisting
             );
 
             $this->videoFileRepository->create($videoFile);
-            $this->storage->rename($sourcePath, $targetPath);
+            $this->storage->rename($sourceLocation, $originalLocation);
 
             return $videoFile;
         });

@@ -7,13 +7,13 @@ namespace App\Streaming\Application\CleanupFailedOriginals;
 use App\Shared\Domain\ValueObject\DomainDateTime;
 use App\Streaming\Domain\Entity\VideoFile;
 use App\Streaming\Domain\Interfaces\VideoFileRepositoryInterface;
-use App\Streaming\Domain\Interfaces\VideoFileStorageInterface;
+use App\Streaming\Domain\Interfaces\VideoTranscodeStorageInterface;
 
 class CleanupFailedOriginals
 {
     public function __construct(
         private VideoFileRepositoryInterface $videoFileRepository,
-        private VideoFileStorageInterface $storage,
+        private VideoTranscodeStorageInterface $storage,
         private int $cleanupAfterDays,
     ) {}
 
@@ -37,12 +37,12 @@ class CleanupFailedOriginals
 
     private function cleanupOriginalOf(VideoFile $videoFile): bool
     {
-        $originalPath = $videoFile->originalPath();
-        if ($originalPath === null) {
+        $originalLocation = $videoFile->originalLocation();
+        if ($originalLocation === null) {
             return false;
         }
 
-        $this->storage->delete($originalPath);
+        $this->storage->delete($originalLocation);
         $videoFile->clearOriginalReference();
         $this->videoFileRepository->update($videoFile);
 

@@ -10,6 +10,7 @@ use App\Streaming\Domain\Entity\VideoFile;
 use App\Streaming\Domain\Interfaces\MovieSummaryResolverInterface;
 use App\Streaming\Domain\Interfaces\VideoFileRepositoryInterface;
 use App\Streaming\Domain\ValueObject\MovieSummary;
+use App\Streaming\Domain\ValueObject\StoragePrice;
 use Mockery;
 use Tests\TestCase;
 
@@ -45,7 +46,7 @@ class ListVideoFilesForAdminTest extends TestCase
                 $movieId->value() => MovieSummary::create($movieId, 'The Matrix', '/matrix.jpg', 1999),
             ]);
 
-        $response = (new ListVideoFilesForAdmin($repository, $movieSummaryResolver))(1, 20);
+        $response = (new ListVideoFilesForAdmin($repository, $movieSummaryResolver, StoragePrice::create(0.015, 10)))(1, 20);
 
         $this->assertSame([
             'items' => [
@@ -59,10 +60,11 @@ class ListVideoFilesForAdminTest extends TestCase
                         'release_year' => 1999,
                     ],
                     'original_filename' => 'source.mkv',
-                    'processed_path' => '/videos/ready.mp4',
+                    'storage_disk' => 'local',
                     'duration_seconds' => 120,
                     'file_size_bytes' => 4096,
                     'audio_language' => 'en',
+                    'monthly_cost' => null,
                     'processing_status' => 'ready',
                     'processing_error' => null,
                     'created_at' => '2026-04-25T10:00:00+00:00',
@@ -86,6 +88,7 @@ class ListVideoFilesForAdminTest extends TestCase
             'mkv',
             '/videos/originals/source.mkv',
             '/videos/ready.mp4',
+            'local',
             120,
             4096,
             'en',

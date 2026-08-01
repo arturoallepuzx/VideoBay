@@ -4,27 +4,15 @@ declare(strict_types=1);
 
 namespace App\Streaming\Domain\Interfaces;
 
-interface VideoFileStorageInterface
+use App\Streaming\Domain\ValueObject\ByteRange;
+use App\Streaming\Domain\ValueObject\StoredObject;
+use App\Streaming\Domain\ValueObject\VideoLocation;
+
+interface VideoFileStorageInterface extends VideoStorageInterface
 {
-    public function existsInRoot(string $filename): bool;
+    /** @return list<StoredObject> */
+    public function listVideos(): array;
 
-    public function existsInOriginals(string $filename): bool;
-
-    /** @return list<array{filename: string, size_bytes: int, modified_at: \DateTimeImmutable}> */
-    public function listFilesInRoot(): array;
-
-    /** @return list<array{filename: string, size_bytes: int, modified_at: \DateTimeImmutable}> */
-    public function listFilesInOriginals(): array;
-
-    public function rename(string $fromAbsolutePath, string $toAbsolutePath): void;
-
-    public function moveUploadedTo(string $temporaryAbsolutePath, string $destinationAbsolutePath): void;
-
-    public function delete(string $absolutePath): void;
-
-    public function fileSize(string $absolutePath): int;
-
-    public function absolutePathInRoot(string $filename): string;
-
-    public function absolutePathInOriginals(string $filename): string;
+    /** @return iterable<string> */
+    public function readChunks(VideoLocation $location, ?ByteRange $range): iterable;
 }

@@ -11,9 +11,9 @@ final readonly class RegisterExistingVideoFileResponse
     private function __construct(
         public string $id,
         public string $movieId,
-        public string $processedPath,
-        public int $durationSeconds,
-        public int $fileSizeBytes,
+        public string $storageDisk,
+        public ?int $durationSeconds,
+        public ?int $fileSizeBytes,
         public ?string $audioLanguage,
         public string $processingStatus,
         public string $createdAt,
@@ -24,10 +24,10 @@ final readonly class RegisterExistingVideoFileResponse
         return new self(
             id: $videoFile->id()->value(),
             movieId: $videoFile->movieId()->value(),
-            processedPath: (string) $videoFile->processedPath(),
-            durationSeconds: (int) $videoFile->durationSeconds(),
-            fileSizeBytes: (int) $videoFile->fileSizeBytes(),
-            audioLanguage: $videoFile->audioLanguage(),
+            storageDisk: (string) $videoFile->processedLocation()?->disk()->value(),
+            durationSeconds: $videoFile->metadata()?->durationSeconds(),
+            fileSizeBytes: $videoFile->metadata()?->fileSizeBytes(),
+            audioLanguage: $videoFile->metadata()?->audioLanguage(),
             processingStatus: $videoFile->processingStatus()->value(),
             createdAt: $videoFile->createdAt()->value()->format(\DateTimeInterface::ATOM),
         );
@@ -39,7 +39,7 @@ final readonly class RegisterExistingVideoFileResponse
         return [
             'id' => $this->id,
             'movie_id' => $this->movieId,
-            'processed_path' => $this->processedPath,
+            'storage_disk' => $this->storageDisk,
             'duration_seconds' => $this->durationSeconds,
             'file_size_bytes' => $this->fileSizeBytes,
             'audio_language' => $this->audioLanguage,

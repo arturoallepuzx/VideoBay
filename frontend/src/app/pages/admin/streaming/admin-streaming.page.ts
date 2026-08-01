@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -7,7 +7,7 @@ import { AdminSidebarComponent } from '../../../components/admin-sidebar/admin-s
 import { InfiniteScrollDirective } from '../../../components/infinite-scroll/infinite-scroll.directive';
 import { MoviePickerComponent } from '../../../components/movie-picker/movie-picker.component';
 import { StreamingService } from '../../../services/streaming/streaming.service';
-import { MovieRefPayload, VideoFile, VideoSourceFile } from '../../../services/streaming/streaming.models';
+import { MovieRefPayload, StorageUsage, VideoFile, VideoSourceFile } from '../../../services/streaming/streaming.models';
 import { MovieSearchResult } from '../../../services/catalog/catalog.models';
 import { ToastService } from '../../../services/ui/toast.service';
 import { TmdbImagePipe } from '../../../pipes/tmdb-image.pipe';
@@ -21,8 +21,13 @@ type AddMode = 'upload' | 'register' | 'transcode';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminStreamingPage {
+  private static readonly PROGRESS_POLL_MS = 5000;
+
+  private static readonly PROGRESS_POLL_WINDOW_MS = 600000;
+
 
   protected readonly videos = signal<VideoFile[]>([]);
+  protected readonly storage = signal<StorageUsage | null>(null);
   protected readonly loading = signal(false);
   protected readonly skeletons = Array.from({ length: 6 });
   protected readonly page = signal(1);
@@ -39,6 +44,7 @@ export class AdminStreamingPage {
   protected readonly rootSources = signal<VideoSourceFile[]>([]);
   protected readonly originalsSources = signal<VideoSourceFile[]>([]);
   protected readonly loadingSources = signal(false);
+  protected readonly ingestionDisk = signal('');
 
   protected readonly reassigningId = signal<string | null>(null);
   protected reassignMovie = '';
@@ -47,8 +53,35 @@ export class AdminStreamingPage {
   private readonly streaming = inject(StreamingService);
   private readonly toast = inject(ToastService);
 
+  private readonly hasVideosInProgress = computed(() =>
+    this.videos().some((video) => video.processing_status === 'processing' || video.processing_status === 'pending'),
+  );
+
   constructor() {
     this.load(true);
+    this.loadStorage();
+
+    effect((onCleanup) => {
+      if (!this.hasVideosInProgress()) {
+        return;
+      }
+
+      const startedAt = Date.now();
+
+      const timer = setInterval(() => {
+        if (Date.now() - startedAt > AdminStreamingPage.PROGRESS_POLL_WINDOW_MS) {
+          clearInterval(timer);
+
+          return;
+        }
+
+        if (!document.hidden && !this.loading()) {
+          this.load(true);
+        }
+      }, AdminStreamingPage.PROGRESS_POLL_MS);
+
+      onCleanup(() => clearInterval(timer));
+    });
   }
 
   protected toggleAdd(): void {
@@ -97,6 +130,7 @@ export class AdminStreamingPage {
         this.showAdd.set(false);
         this.toast.show('Operación enviada');
         this.load(true);
+        this.loadStorage();
       },
       error: (err: HttpErrorResponse) => {
         this.saving.set(false);
@@ -173,6 +207,11 @@ export class AdminStreamingPage {
         this.confirmDeleteId.set(null);
         this.toast.show('Vídeo borrado');
         this.load(true);
+        this.loadStorage();
+
+        if (this.showAdd()) {
+          this.loadSources();
+        }
       },
       error: (err: HttpErrorResponse) => this.toast.show(this.messageFor(err)),
     });
@@ -182,10 +221,24 @@ export class AdminStreamingPage {
     if (status === 'ready') {
       return 'status-pill--ready';
     }
-    if (status === 'processing') {
-      return 'status-pill--paid';
+    if (status === 'processing' || status === 'pending') {
+      return 'status-pill--working';
+    }
+    if (status === 'failed') {
+      return 'status-pill--failed';
     }
     return '';
+  }
+
+  protected statusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      pending: 'En cola',
+      processing: 'Preparando',
+      ready: 'Lista',
+      failed: 'Error',
+    };
+
+    return labels[status] ?? status;
   }
 
   protected sizeMb(bytes: number | null): string {
@@ -220,10 +273,37 @@ export class AdminStreamingPage {
     });
   }
 
+  private loadStorage(): void {
+    this.streaming.getStorageUsage().subscribe({
+      next: (usage) => this.storage.set(usage),
+    });
+  }
+
+  protected diskLabel(disk: string | null): string {
+    if (disk === 'r2') {
+      return 'Cloudflare R2';
+    }
+
+    return disk === 'local' ? 'Disco local' : '—';
+  }
+
+  protected sourceDiskLabel(): string {
+    return this.mode === 'transcode' ? 'Disco local' : this.diskLabel(this.ingestionDisk());
+  }
+
+  protected gigabytes(bytes: number): string {
+    return `${(bytes / 1e9).toFixed(2)} GB`;
+  }
+
+  protected money(amount: number | null): string {
+    return amount !== null ? `$${amount.toFixed(2)}` : '—';
+  }
+
   private loadSources(): void {
     this.loadingSources.set(true);
     this.streaming.listPendingSources().subscribe({
       next: (result) => {
+        this.ingestionDisk.set(result.ingestion_disk);
         this.rootSources.set(result.root);
         this.originalsSources.set(result.originals);
         this.loadingSources.set(false);

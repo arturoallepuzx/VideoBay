@@ -82,6 +82,15 @@ return [
             'after_commit' => false,
         ],
 
+        'redis_storage' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => env('REDIS_STORAGE_QUEUE', 'storage'),
+            'retry_after' => (int) env('REDIS_STORAGE_RETRY_AFTER', 660),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
         'deferred' => [
             'driver' => 'deferred',
         ],

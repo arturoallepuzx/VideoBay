@@ -50,6 +50,7 @@ use App\Review\Infrastructure\Entrypoint\Http\UpdateReviewController as ReviewUp
 use App\Streaming\Infrastructure\Entrypoint\Http\DeleteVideoFileController as StreamingDeleteVideoFileController;
 use App\Streaming\Infrastructure\Entrypoint\Http\EnqueueTranscodingFromExistingController as StreamingEnqueueTranscodingFromExistingController;
 use App\Streaming\Infrastructure\Entrypoint\Http\GetPlaybackProgressController as StreamingGetPlaybackProgressController;
+use App\Streaming\Infrastructure\Entrypoint\Http\GetStorageUsageController as StreamingGetStorageUsageController;
 use App\Streaming\Infrastructure\Entrypoint\Http\ListContinueWatchingController as StreamingListContinueWatchingController;
 use App\Streaming\Infrastructure\Entrypoint\Http\ListMyWatchHistoryController as StreamingListMyWatchHistoryController;
 use App\Streaming\Infrastructure\Entrypoint\Http\ListPendingVideoFilesController as StreamingListPendingVideoFilesController;
@@ -295,6 +296,7 @@ Route::prefix('/admin/videos')
     ->group(function () {
         Route::get('/', StreamingListVideoFilesForAdminController::class);
         Route::get('/pending', StreamingListPendingVideoFilesController::class);
+        Route::get('/storage', StreamingGetStorageUsageController::class);
         Route::post('/upload', StreamingUploadVideoFileController::class);
         Route::post('/register', StreamingRegisterExistingVideoFileController::class);
         Route::post('/transcode-existing', StreamingEnqueueTranscodingFromExistingController::class);
@@ -303,7 +305,7 @@ Route::prefix('/admin/videos')
     });
 
 Route::get('/stream/{videoFileId}', StreamingServeVideoRangeController::class)
-    ->middleware('auth.access_token')
+    ->middleware(['auth.access_token', 'throttle:200,1'])
     ->whereUuid('videoFileId');
 
 Route::prefix('/playback')

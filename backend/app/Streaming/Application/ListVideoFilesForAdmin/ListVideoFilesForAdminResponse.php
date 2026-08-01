@@ -6,6 +6,7 @@ namespace App\Streaming\Application\ListVideoFilesForAdmin;
 
 use App\Streaming\Domain\Entity\VideoFile;
 use App\Streaming\Domain\ValueObject\MovieSummary;
+use App\Streaming\Domain\ValueObject\StoragePrice;
 
 final readonly class ListVideoFilesForAdminResponse
 {
@@ -21,10 +22,10 @@ final readonly class ListVideoFilesForAdminResponse
      * @param  array{items: list<VideoFile>, total: int, page: int, totalPages: int}  $result
      * @param  array<string, MovieSummary>  $movieSummaries
      */
-    public static function create(array $result, array $movieSummaries): self
+    public static function create(array $result, array $movieSummaries, ?StoragePrice $price): self
     {
         $items = array_map(
-            fn (VideoFile $vf): array => self::videoFileToArray($vf, $movieSummaries[$vf->movieId()->value()] ?? null),
+            fn (VideoFile $vf): array => self::videoFileToArray($vf, $movieSummaries[$vf->movieId()->value()] ?? null, $price),
             $result['items'],
         );
 
@@ -48,7 +49,19 @@ final readonly class ListVideoFilesForAdminResponse
     }
 
     /** @return array<string, mixed> */
-    private static function videoFileToArray(VideoFile $vf, ?MovieSummary $movieSummary): array
+    private static function monthlyCostOf(VideoFile $videoFile, ?StoragePrice $price): ?float
+    {
+        $metadata = $videoFile->metadata();
+        $location = $videoFile->processedLocation();
+
+        if ($price === null || $metadata === null || $location === null || ! $location->disk()->isR2()) {
+            return null;
+        }
+
+        return $price->monthlyCostFor($metadata->fileSizeBytes());
+    }
+
+    private static function videoFileToArray(VideoFile $vf, ?MovieSummary $movieSummary, ?StoragePrice $price): array
     {
         $movieId = $vf->movieId()->value();
 
@@ -62,10 +75,11 @@ final readonly class ListVideoFilesForAdminResponse
                 'release_year' => $movieSummary?->releaseYear(),
             ],
             'original_filename' => $vf->originalFilename(),
-            'processed_path' => $vf->processedPath(),
-            'duration_seconds' => $vf->durationSeconds(),
-            'file_size_bytes' => $vf->fileSizeBytes(),
-            'audio_language' => $vf->audioLanguage(),
+            'storage_disk' => ($vf->processedLocation() ?? $vf->originalLocation())?->disk()->value(),
+            'duration_seconds' => $vf->metadata()?->durationSeconds(),
+            'file_size_bytes' => $vf->metadata()?->fileSizeBytes(),
+            'audio_language' => $vf->metadata()?->audioLanguage(),
+            'monthly_cost' => self::monthlyCostOf($vf, $price),
             'processing_status' => $vf->processingStatus()->value(),
             'processing_error' => $vf->processingError(),
             'created_at' => $vf->createdAt()->value()->format(\DateTimeInterface::ATOM),

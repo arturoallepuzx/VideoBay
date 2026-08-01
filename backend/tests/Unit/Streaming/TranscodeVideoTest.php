@@ -11,8 +11,12 @@ use App\Streaming\Application\TranscodeVideo\TranscodeVideo;
 use App\Streaming\Domain\Entity\VideoFile;
 use App\Streaming\Domain\Exception\TranscodingFailedException;
 use App\Streaming\Domain\Interfaces\VideoFileRepositoryInterface;
-use App\Streaming\Domain\Interfaces\VideoFileStorageInterface;
+use App\Streaming\Domain\Interfaces\VideoMetadataProbeInterface;
 use App\Streaming\Domain\Interfaces\VideoTranscoderInterface;
+use App\Streaming\Domain\Interfaces\VideoTranscodeStorageInterface;
+use App\Streaming\Domain\ValueObject\StorageDisk;
+use App\Streaming\Domain\ValueObject\VideoLocation;
+use App\Streaming\Domain\ValueObject\VideoMetadata;
 use Mockery;
 use Tests\TestCase;
 
@@ -35,6 +39,7 @@ class TranscodeVideoTest extends TestCase
             'mkv',
             $originalPath,
             null,
+            'local',
             null,
             null,
             null,
@@ -57,6 +62,7 @@ class TranscodeVideoTest extends TestCase
             null,
             null,
             '/videos/ready.mp4',
+            'local',
             120,
             4096,
             null,
@@ -102,22 +108,27 @@ class TranscodeVideoTest extends TestCase
         $repository->shouldReceive('findByUuidForUpdate')->once()->andReturn($video);
         $repository->shouldReceive('update')->atLeast()->once();
 
-        $storage = Mockery::mock(VideoFileStorageInterface::class);
-        $storage->shouldReceive('absolutePathInRoot')->with($uuid.'.mp4')->andReturn($outputPath);
-        $storage->shouldReceive('delete')->once()->with('/videos/originals/src.mkv');
+        $storage = Mockery::mock(VideoTranscodeStorageInterface::class);
+        $storage->shouldReceive('locationForVideo')
+            ->with($uuid.'.mp4')
+            ->andReturn(VideoLocation::create(StorageDisk::local(), $outputPath));
+        $storage->shouldReceive('delete')
+            ->once()
+            ->with(Mockery::on(fn (VideoLocation $location): bool => $location->key() === '/videos/originals/src.mkv'));
 
         $transcoder = Mockery::mock(VideoTranscoderInterface::class);
         $transcoder->shouldReceive('transcodeToMp4')->once()->with('/videos/originals/src.mkv', $outputPath);
-        $transcoder->shouldReceive('probe')->once()->with($outputPath)->andReturn([
-            'duration_seconds' => 120,
-            'file_size_bytes' => 5000,
-            'audio_language' => 'eng',
-        ]);
 
-        (new TranscodeVideo($repository, $transcoder, $storage, $this->transactionRunner(), $this->eventDispatcher(), false))($uuid);
+        $metadataProbe = Mockery::mock(VideoMetadataProbeInterface::class);
+        $metadataProbe->shouldReceive('probe')
+            ->once()
+            ->with(Mockery::on(fn (VideoLocation $location): bool => $location->key() === $outputPath))
+            ->andReturn(VideoMetadata::create(120, 5000, 'eng'));
+
+        (new TranscodeVideo($repository, $transcoder, $metadataProbe, $storage, $this->transactionRunner(), $this->eventDispatcher(), false))($uuid);
 
         $this->assertTrue($video->isReady());
-        $this->assertNull($video->originalPath());
+        $this->assertNull($video->originalLocation());
     }
 
     public function test_keeps_original_when_configured(): void
@@ -130,22 +141,22 @@ class TranscodeVideoTest extends TestCase
         $repository->shouldReceive('findByUuidForUpdate')->once()->andReturn($video);
         $repository->shouldReceive('update')->atLeast()->once();
 
-        $storage = Mockery::mock(VideoFileStorageInterface::class);
-        $storage->shouldReceive('absolutePathInRoot')->with($uuid.'.mp4')->andReturn($outputPath);
+        $storage = Mockery::mock(VideoTranscodeStorageInterface::class);
+        $storage->shouldReceive('locationForVideo')
+            ->with($uuid.'.mp4')
+            ->andReturn(VideoLocation::create(StorageDisk::local(), $outputPath));
         $storage->shouldNotReceive('delete');
 
         $transcoder = Mockery::mock(VideoTranscoderInterface::class);
         $transcoder->shouldReceive('transcodeToMp4')->once();
-        $transcoder->shouldReceive('probe')->once()->andReturn([
-            'duration_seconds' => 120,
-            'file_size_bytes' => 5000,
-            'audio_language' => null,
-        ]);
 
-        (new TranscodeVideo($repository, $transcoder, $storage, $this->transactionRunner(), $this->eventDispatcher(), true))($uuid);
+        $metadataProbe = Mockery::mock(VideoMetadataProbeInterface::class);
+        $metadataProbe->shouldReceive('probe')->once()->andReturn(VideoMetadata::create(120, 5000, null));
+
+        (new TranscodeVideo($repository, $transcoder, $metadataProbe, $storage, $this->transactionRunner(), $this->eventDispatcher(), true))($uuid);
 
         $this->assertTrue($video->isReady());
-        $this->assertSame('/videos/originals/src.mkv', $video->originalPath());
+        $this->assertSame('/videos/originals/src.mkv', $video->originalLocation()?->key());
     }
 
     public function test_does_nothing_when_video_is_not_pending(): void
@@ -156,11 +167,14 @@ class TranscodeVideoTest extends TestCase
         $repository->shouldReceive('findByUuidForUpdate')->once()->andReturn($video);
         $repository->shouldNotReceive('update');
 
-        $storage = Mockery::mock(VideoFileStorageInterface::class);
+        $storage = Mockery::mock(VideoTranscodeStorageInterface::class);
         $transcoder = Mockery::mock(VideoTranscoderInterface::class);
         $transcoder->shouldNotReceive('transcodeToMp4');
 
-        (new TranscodeVideo($repository, $transcoder, $storage, $this->transactionRunner(), $this->eventDispatcher(), false))($video->id()->value());
+        $metadataProbe = Mockery::mock(VideoMetadataProbeInterface::class);
+        $metadataProbe->shouldNotReceive('probe');
+
+        (new TranscodeVideo($repository, $transcoder, $metadataProbe, $storage, $this->transactionRunner(), $this->eventDispatcher(), false))($video->id()->value());
 
         $this->assertTrue($video->isReady());
     }
@@ -175,8 +189,10 @@ class TranscodeVideoTest extends TestCase
         $repository->shouldReceive('findByUuidForUpdate')->once()->andReturn($video);
         $repository->shouldReceive('update')->atLeast()->once();
 
-        $storage = Mockery::mock(VideoFileStorageInterface::class);
-        $storage->shouldReceive('absolutePathInRoot')->with($uuid.'.mp4')->andReturn($outputPath);
+        $storage = Mockery::mock(VideoTranscodeStorageInterface::class);
+        $storage->shouldReceive('locationForVideo')
+            ->with($uuid.'.mp4')
+            ->andReturn(VideoLocation::create(StorageDisk::local(), $outputPath));
         $storage->shouldNotReceive('delete');
 
         $transcoder = Mockery::mock(VideoTranscoderInterface::class);
@@ -184,7 +200,10 @@ class TranscodeVideoTest extends TestCase
             ->once()
             ->andThrow(TranscodingFailedException::ffmpegError('/videos/originals/src.mkv', 'boom'));
 
-        (new TranscodeVideo($repository, $transcoder, $storage, $this->transactionRunner(), $this->eventDispatcher(), false))($uuid);
+        $metadataProbe = Mockery::mock(VideoMetadataProbeInterface::class);
+        $metadataProbe->shouldNotReceive('probe');
+
+        (new TranscodeVideo($repository, $transcoder, $metadataProbe, $storage, $this->transactionRunner(), $this->eventDispatcher(), false))($uuid);
 
         $this->assertSame('failed', $video->processingStatus()->value());
     }

@@ -18,9 +18,24 @@ class VideoFileStorageException extends ServiceUnavailableException
         return new self(sprintf('Failed to move "%s" to "%s".', $from, $to));
     }
 
-    public static function deleteFailed(string $path): self
+    public static function deleteFailed(string $path, ?\Throwable $previous = null): self
     {
-        return new self(sprintf('Failed to delete "%s".', $path));
+        return new self(sprintf('Failed to delete "%s".', $path), previous: $previous);
+    }
+
+    public static function readFailed(string $path, ?\Throwable $previous = null): self
+    {
+        return new self(sprintf('Failed to read "%s".', $path), previous: $previous);
+    }
+
+    public static function copyFailed(string $from, string $to, ?\Throwable $previous = null): self
+    {
+        return new self(sprintf('Failed to copy "%s" to "%s".', $from, $to), previous: $previous);
+    }
+
+    public static function listFailed(string $path, ?\Throwable $previous = null): self
+    {
+        return new self(sprintf('Failed to list "%s".', $path), previous: $previous);
     }
 
     public static function directoryCreationFailed(string $path): self

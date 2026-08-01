@@ -1952,6 +1952,44 @@ img { display: block; max-width: 100%; }
 .status-pill--paid { color: #FFB347; border-color: rgba(255,179,71,0.3); }
 .status-pill--ready { color: #4ADE80; border-color: rgba(74,222,128,0.3); }
 .status-pill--picked { color: var(--text-3); }
+.status-pill--failed { color: var(--vb-red); border-color: rgba(239,68,68,0.35); }
+.status-pill--working { color: #FFB347; border-color: rgba(255,179,71,0.3); }
+.status-pill--working::before {
+  background: transparent;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  animation: vb-spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-pill--working::before { animation: none; background: currentColor; border-color: transparent; }
+}
+
+.storage-summary {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.storage-summary__item {
+  flex: 1;
+  min-width: 180px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+.storage-summary__label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.storage-summary__value {
+  font-family: var(--serif);
+  font-size: 22px;
+  margin: 4px 0 2px;
+}
 
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 

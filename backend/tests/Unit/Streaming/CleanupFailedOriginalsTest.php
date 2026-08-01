@@ -9,7 +9,8 @@ use App\Shared\Domain\ValueObject\Uuid;
 use App\Streaming\Application\CleanupFailedOriginals\CleanupFailedOriginals;
 use App\Streaming\Domain\Entity\VideoFile;
 use App\Streaming\Domain\Interfaces\VideoFileRepositoryInterface;
-use App\Streaming\Domain\Interfaces\VideoFileStorageInterface;
+use App\Streaming\Domain\Interfaces\VideoTranscodeStorageInterface;
+use App\Streaming\Domain\ValueObject\VideoLocation;
 use Mockery;
 use Tests\TestCase;
 
@@ -32,6 +33,7 @@ class CleanupFailedOriginalsTest extends TestCase
             'mkv',
             $originalPath,
             null,
+            'local',
             null,
             null,
             null,
@@ -55,11 +57,15 @@ class CleanupFailedOriginalsTest extends TestCase
             ->andReturn([$first, $second]);
         $repository->shouldReceive('update')
             ->twice()
-            ->with(Mockery::on(fn (VideoFile $video): bool => $video->originalPath() === null));
+            ->with(Mockery::on(fn (VideoFile $video): bool => $video->originalLocation() === null));
 
-        $storage = Mockery::mock(VideoFileStorageInterface::class);
-        $storage->shouldReceive('delete')->once()->with('/videos/originals/a.mkv');
-        $storage->shouldReceive('delete')->once()->with('/videos/originals/b.mkv');
+        $storage = Mockery::mock(VideoTranscodeStorageInterface::class);
+        $storage->shouldReceive('delete')
+            ->once()
+            ->with(Mockery::on(fn (VideoLocation $location): bool => $location->key() === '/videos/originals/a.mkv'));
+        $storage->shouldReceive('delete')
+            ->once()
+            ->with(Mockery::on(fn (VideoLocation $location): bool => $location->key() === '/videos/originals/b.mkv'));
 
         $deleted = (new CleanupFailedOriginals($repository, $storage, 3))();
 
@@ -75,8 +81,10 @@ class CleanupFailedOriginalsTest extends TestCase
         $repository->shouldReceive('findFailedOlderThan')->once()->andReturn([$withPath, $withoutPath]);
         $repository->shouldReceive('update')->once();
 
-        $storage = Mockery::mock(VideoFileStorageInterface::class);
-        $storage->shouldReceive('delete')->once()->with('/videos/originals/a.mkv');
+        $storage = Mockery::mock(VideoTranscodeStorageInterface::class);
+        $storage->shouldReceive('delete')
+            ->once()
+            ->with(Mockery::on(fn (VideoLocation $location): bool => $location->key() === '/videos/originals/a.mkv'));
 
         $deleted = (new CleanupFailedOriginals($repository, $storage, 3))();
 
@@ -88,7 +96,7 @@ class CleanupFailedOriginalsTest extends TestCase
         $repository = Mockery::mock(VideoFileRepositoryInterface::class);
         $repository->shouldReceive('findFailedOlderThan')->once()->andReturn([]);
 
-        $storage = Mockery::mock(VideoFileStorageInterface::class);
+        $storage = Mockery::mock(VideoTranscodeStorageInterface::class);
         $storage->shouldNotReceive('delete');
 
         $deleted = (new CleanupFailedOriginals($repository, $storage, 3))();

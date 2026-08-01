@@ -9,6 +9,8 @@ use App\Shared\Domain\ValueObject\Uuid;
 use App\Shared\Infrastructure\Persistence\MovieIdResolverInterface;
 use App\Streaming\Domain\Entity\VideoFile;
 use App\Streaming\Domain\Interfaces\VideoFileRepositoryInterface;
+use App\Streaming\Domain\ValueObject\DiskUsage;
+use App\Streaming\Domain\ValueObject\StorageDisk;
 use App\Streaming\Domain\ValueObject\VideoFileProcessingStatus;
 use App\Streaming\Infrastructure\Persistence\Models\EloquentVideoFile;
 
@@ -43,12 +45,13 @@ class EloquentVideoFileRepository implements VideoFileRepositoryInterface
             'movie_id' => $this->movieIdResolver->toInternalId($videoFile->movieId()),
             'original_filename' => $videoFile->originalFilename(),
             'original_format' => $videoFile->originalFormat(),
-            'original_path' => $videoFile->originalPath(),
-            'processed_path' => $videoFile->processedPath(),
+            'original_path' => $videoFile->originalLocation()?->key(),
+            'processed_path' => $videoFile->processedLocation()?->key(),
+            'storage_disk' => $this->storageDiskOf($videoFile),
             'mime_type' => 'video/mp4',
-            'duration_seconds' => $videoFile->durationSeconds(),
-            'file_size_bytes' => $videoFile->fileSizeBytes(),
-            'audio_language' => $videoFile->audioLanguage(),
+            'duration_seconds' => $videoFile->metadata()?->durationSeconds(),
+            'file_size_bytes' => $videoFile->metadata()?->fileSizeBytes(),
+            'audio_language' => $videoFile->metadata()?->audioLanguage(),
             'processing_status' => $videoFile->processingStatus()->value(),
             'processing_error' => $videoFile->processingError(),
             'created_at' => $videoFile->createdAt()->value(),
@@ -62,11 +65,12 @@ class EloquentVideoFileRepository implements VideoFileRepositoryInterface
             ->where('uuid', $videoFile->id()->value())
             ->update([
                 'movie_id' => $this->movieIdResolver->toInternalId($videoFile->movieId()),
-                'original_path' => $videoFile->originalPath(),
-                'processed_path' => $videoFile->processedPath(),
-                'duration_seconds' => $videoFile->durationSeconds(),
-                'file_size_bytes' => $videoFile->fileSizeBytes(),
-                'audio_language' => $videoFile->audioLanguage(),
+                'original_path' => $videoFile->originalLocation()?->key(),
+                'processed_path' => $videoFile->processedLocation()?->key(),
+                'storage_disk' => $this->storageDiskOf($videoFile),
+                'duration_seconds' => $videoFile->metadata()?->durationSeconds(),
+                'file_size_bytes' => $videoFile->metadata()?->fileSizeBytes(),
+                'audio_language' => $videoFile->metadata()?->audioLanguage(),
                 'processing_status' => $videoFile->processingStatus()->value(),
                 'processing_error' => $videoFile->processingError(),
                 'deleted_at' => $videoFile->deletedAt()?->value(),
@@ -123,6 +127,29 @@ class EloquentVideoFileRepository implements VideoFileRepositoryInterface
             ->all();
     }
 
+    /** @return list<DiskUsage> */
+    public function sumUsageByDisk(): array
+    {
+        return $this->model->newQuery()
+            ->whereNull('deleted_at')
+            ->groupBy('storage_disk')
+            ->selectRaw('storage_disk, COUNT(*) as video_count, COALESCE(SUM(file_size_bytes), 0) as total_bytes')
+            ->get()
+            ->map(fn ($row): DiskUsage => DiskUsage::create(
+                StorageDisk::create((string) $row->storage_disk),
+                (int) $row->video_count,
+                (int) $row->total_bytes,
+            ))
+            ->all();
+    }
+
+    private function storageDiskOf(VideoFile $videoFile): string
+    {
+        $location = $videoFile->processedLocation() ?? $videoFile->originalLocation();
+
+        return ($location?->disk() ?? StorageDisk::local())->value();
+    }
+
     private function toDomainEntity(EloquentVideoFile $model): VideoFile
     {
         return VideoFile::fromPersistence(
@@ -132,6 +159,7 @@ class EloquentVideoFileRepository implements VideoFileRepositoryInterface
             $model->original_format !== null ? (string) $model->original_format : null,
             $model->original_path !== null ? (string) $model->original_path : null,
             $model->processed_path !== null ? (string) $model->processed_path : null,
+            (string) $model->storage_disk,
             $model->duration_seconds !== null ? (int) $model->duration_seconds : null,
             $model->file_size_bytes !== null ? (int) $model->file_size_bytes : null,
             $model->audio_language !== null ? (string) $model->audio_language : null,

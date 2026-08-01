@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BaseApiService } from '../api/base-api.service';
-import { ContinueWatchingPage, MovieRefPayload, PendingVideoFiles, PlaybackProgress, VideoFilesPage, VideoSourcePayload } from './streaming.models';
+import { ContinueWatchingPage, MovieRefPayload, PendingVideoFiles, PlaybackProgress, StorageUsage, VideoFilesPage, VideoSourcePayload } from './streaming.models';
 
 @Injectable({ providedIn: 'root' })
 export class StreamingService extends BaseApiService {
@@ -42,6 +42,10 @@ export class StreamingService extends BaseApiService {
 
   listPendingSources(): Observable<PendingVideoFiles> {
     return this.get<PendingVideoFiles>('/admin/videos/pending');
+  }
+
+  getStorageUsage(): Observable<StorageUsage> {
+    return this.get<StorageUsage>('/admin/videos/storage');
   }
 
   uploadVideo(file: File, movie: MovieRefPayload): Observable<unknown> {

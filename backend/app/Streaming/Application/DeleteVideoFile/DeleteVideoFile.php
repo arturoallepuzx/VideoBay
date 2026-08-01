@@ -6,6 +6,7 @@ namespace App\Streaming\Application\DeleteVideoFile;
 
 use App\Shared\Domain\Interfaces\TransactionRunnerInterface;
 use App\Shared\Domain\ValueObject\Uuid;
+use App\Streaming\Domain\Entity\VideoFile;
 use App\Streaming\Domain\Exception\VideoFileNotFoundException;
 use App\Streaming\Domain\Interfaces\VideoFileRepositoryInterface;
 use App\Streaming\Domain\Interfaces\VideoFileStorageInterface;
@@ -21,8 +22,15 @@ class DeleteVideoFile
     public function __invoke(string $videoFileUuid): void
     {
         $uuid = Uuid::create($videoFileUuid);
+        $videoFile = $this->videoFileRepository->findByUuid($uuid);
 
-        $videoFile = $this->transactionRunner->run(function () use ($uuid) {
+        if ($videoFile === null || $videoFile->isDeleted()) {
+            throw VideoFileNotFoundException::forUuid($uuid);
+        }
+
+        $this->deleteStoredFiles($videoFile);
+
+        $this->transactionRunner->run(function () use ($uuid): void {
             $videoFile = $this->videoFileRepository->findByUuidForUpdate($uuid);
 
             if ($videoFile === null || $videoFile->isDeleted()) {
@@ -31,16 +39,19 @@ class DeleteVideoFile
 
             $videoFile->softDelete();
             $this->videoFileRepository->update($videoFile);
-
-            return $videoFile;
         });
+    }
 
-        if ($videoFile->processedPath() !== null) {
-            $this->storage->delete($videoFile->processedPath());
+    private function deleteStoredFiles(VideoFile $videoFile): void
+    {
+        $processedLocation = $videoFile->processedLocation();
+        if ($processedLocation !== null) {
+            $this->storage->delete($processedLocation);
         }
 
-        if ($videoFile->originalPath() !== null) {
-            $this->storage->delete($videoFile->originalPath());
+        $originalLocation = $videoFile->originalLocation();
+        if ($originalLocation !== null) {
+            $this->storage->delete($originalLocation);
         }
     }
 }

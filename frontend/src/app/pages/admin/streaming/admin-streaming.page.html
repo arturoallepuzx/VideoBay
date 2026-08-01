@@ -31,7 +31,7 @@
             </div>
           } @else {
             <div class="field">
-              <label class="field__label">Archivo de origen ({{ mode === 'transcode' ? 'originals/' : 'raíz' }})</label>
+              <label class="field__label">Archivo de origen · {{ sourceDiskLabel() }}</label>
               @if (loadingSources()) {
                 <div class="mono tiny muted" style="padding:10px 0">Cargando archivos…</div>
               } @else if (sourcesForMode().length) {
@@ -43,7 +43,7 @@
                 </select>
               } @else {
                 <div class="mono tiny muted" style="padding:10px 0">
-                  No hay archivos en {{ mode === 'transcode' ? 'videos/originals/' : 'videos/' }}.
+                  No hay archivos disponibles en {{ sourceDiskLabel() }}.
                 </div>
               }
             </div>
@@ -59,6 +59,18 @@
       </div>
     }
 
+    @if (storage(); as usage) {
+      <div class="storage-summary">
+        @for (disk of usage.disks; track disk.disk) {
+          <div class="storage-summary__item">
+            <div class="storage-summary__label">{{ diskLabel(disk.disk) }}</div>
+            <div class="storage-summary__value">{{ gigabytes(disk.total_bytes) }}</div>
+            <div class="tiny muted">{{ disk.video_count }} películas@if (disk.monthly_cost !== null) { · {{ money(disk.monthly_cost) }}/mes }</div>
+          </div>
+        }
+      </div>
+    }
+
     @if (loading() && !videos().length) {
       <div class="mod-list">
         @for (s of skeletons; track $index) { <div class="skel mod-skel"></div> }
@@ -67,12 +79,11 @@
       <div class="table-scroll">
         <table class="table table--cards">
           <thead>
-            <tr><th>Archivo</th><th>Película</th><th>Estado</th><th>Duración</th><th>Tamaño</th><th>Creado</th><th></th></tr>
+            <tr><th>Película</th><th>Estado</th><th>Disco</th><th>Duración</th><th>Tamaño</th><th>Coste/mes</th><th>Creado</th><th></th></tr>
           </thead>
           <tbody>
             @for (video of videos(); track video.id) {
               <tr>
-                <td data-label="Archivo" style="font-family:var(--serif);font-size:15px">{{ video.original_filename ?? '—' }}</td>
                 <td data-label="Película">
                   <div style="display:flex;align-items:center;gap:10px">
                     <div style="width:28px;height:42px;flex-shrink:0;border-radius:var(--r-xs);overflow:hidden;background:var(--surface-2)">
@@ -88,9 +99,16 @@
                     </div>
                   </div>
                 </td>
-                <td data-label="Estado"><span class="status-pill {{ statusClass(video.processing_status) }}">{{ video.processing_status }}</span></td>
+                <td data-label="Estado">
+                  <span class="status-pill {{ statusClass(video.processing_status) }}">{{ statusLabel(video.processing_status) }}</span>
+                  @if (video.processing_error) {
+                    <div class="tiny" style="color:var(--vb-red);margin-top:6px;max-width:280px">{{ video.processing_error }}</div>
+                  }
+                </td>
+                <td data-label="Disco" class="mono tiny">{{ diskLabel(video.storage_disk) }}</td>
                 <td data-label="Duración" class="mono tiny">{{ durationMin(video.duration_seconds) }}</td>
                 <td data-label="Tamaño" class="mono tiny">{{ sizeMb(video.file_size_bytes) }}</td>
+                <td data-label="Coste/mes" class="mono tiny">{{ money(video.monthly_cost) }}</td>
                 <td data-label="Creado" class="mono tiny">{{ video.created_at | date:'dd MMM HH:mm' }}</td>
                 <td data-label="Acciones">
                   <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
@@ -106,7 +124,7 @@
               </tr>
               @if (reassigningId() === video.id) {
                 <tr>
-                  <td colspan="7" style="background:var(--surface-2)">
+                  <td colspan="8" style="background:var(--surface-2)">
                     <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
                       <div class="field" style="margin:0;flex:1;min-width:240px">
                         <label class="field__label">Reasignar a</label>
@@ -115,9 +133,6 @@
                       <button class="btn btn--primary" [disabled]="saving()" (click)="submitReassign(video.id)">Guardar</button>
                       <button class="btn" (click)="cancelReassign()">Cancelar</button>
                     </div>
-                    @if (video.processing_error) {
-                      <div class="tiny" style="color:var(--vb-red);margin-top:8px">Error: {{ video.processing_error }}</div>
-                    }
                   </td>
                 </tr>
               }

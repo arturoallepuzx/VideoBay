@@ -6,7 +6,10 @@ namespace Tests\Unit\Streaming;
 
 use App\Shared\Domain\ValueObject\Uuid;
 use App\Streaming\Domain\Entity\VideoFile;
+use App\Streaming\Domain\ValueObject\StorageDisk;
 use App\Streaming\Domain\ValueObject\VideoFileProcessingStatus;
+use App\Streaming\Domain\ValueObject\VideoLocation;
+use App\Streaming\Domain\ValueObject\VideoMetadata;
 use PHPUnit\Framework\TestCase;
 
 class VideoFileTest extends TestCase
@@ -18,9 +21,7 @@ class VideoFileTest extends TestCase
             Uuid::generate(),
             'inception.mkv',
             'mkv',
-            '/videos/originals/x.mkv',
-            null,
-            null,
+            VideoLocation::create(StorageDisk::local(), '/videos/originals/x.mkv'),
             null,
             null,
             VideoFileProcessingStatus::pending(),
@@ -35,10 +36,8 @@ class VideoFileTest extends TestCase
             null,
             null,
             null,
-            '/videos/x.mp4',
-            8820,
-            4421532000,
-            'en',
+            VideoLocation::create(StorageDisk::local(), '/videos/x.mp4'),
+            VideoMetadata::create(8820, 4421532000, 'en'),
             VideoFileProcessingStatus::ready(),
         );
     }
@@ -50,8 +49,6 @@ class VideoFileTest extends TestCase
         VideoFile::dddCreate(
             Uuid::generate(),
             Uuid::generate(),
-            null,
-            null,
             null,
             null,
             null,
@@ -70,8 +67,6 @@ class VideoFileTest extends TestCase
             Uuid::generate(),
             'x.mkv',
             'mkv',
-            null,
-            null,
             null,
             null,
             null,
@@ -94,23 +89,23 @@ class VideoFileTest extends TestCase
         $videoFile->markProcessing();
         $this->assertTrue($videoFile->processingStatus()->isProcessing());
 
-        $videoFile->markReady('/videos/uuid.mp4', 8820, 4421532000, 'en');
+        $videoFile->markReady(VideoLocation::create(StorageDisk::local(), '/videos/uuid.mp4'), VideoMetadata::create(8820, 4421532000, 'en'));
 
         $this->assertTrue($videoFile->isReady());
-        $this->assertSame('/videos/uuid.mp4', $videoFile->processedPath());
-        $this->assertSame(8820, $videoFile->durationSeconds());
-        $this->assertSame('/videos/originals/x.mkv', $videoFile->originalPath());
+        $this->assertSame('/videos/uuid.mp4', $videoFile->processedLocation()?->key());
+        $this->assertSame(8820, $videoFile->metadata()?->durationSeconds());
+        $this->assertSame('/videos/originals/x.mkv', $videoFile->originalLocation()?->key());
     }
 
     public function test_clear_original_reference_after_ready(): void
     {
         $videoFile = $this->makePending();
         $videoFile->markProcessing();
-        $videoFile->markReady('/videos/uuid.mp4', 100, 200, null);
+        $videoFile->markReady(VideoLocation::create(StorageDisk::local(), '/videos/uuid.mp4'), VideoMetadata::create(100, 200, null));
 
         $videoFile->clearOriginalReference();
 
-        $this->assertNull($videoFile->originalPath());
+        $this->assertNull($videoFile->originalLocation());
         $this->assertTrue($videoFile->isReady());
     }
 
@@ -147,5 +142,31 @@ class VideoFileTest extends TestCase
 
         $this->assertTrue($videoFile->movieId()->equals($newMovieId));
         $this->assertTrue($videoFile->wasModified());
+    }
+
+    public function test_from_persistence_maps_processed_location_to_stored_disk(): void
+    {
+        $now = new \DateTimeImmutable;
+
+        $videoFile = VideoFile::fromPersistence(
+            Uuid::generate()->value(),
+            Uuid::generate()->value(),
+            null,
+            null,
+            null,
+            'abc.mp4',
+            'r2',
+            120,
+            4096,
+            'en',
+            'ready',
+            null,
+            $now,
+            $now,
+            null,
+        );
+
+        $this->assertTrue($videoFile->processedLocation()?->disk()->isR2());
+        $this->assertSame('abc.mp4', $videoFile->processedLocation()?->key());
     }
 }

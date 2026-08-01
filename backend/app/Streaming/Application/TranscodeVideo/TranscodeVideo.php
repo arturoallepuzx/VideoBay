@@ -12,15 +12,17 @@ use App\Streaming\Domain\Event\VideoFileReady;
 use App\Streaming\Domain\Exception\InvalidVideoFormatException;
 use App\Streaming\Domain\Exception\TranscodingFailedException;
 use App\Streaming\Domain\Interfaces\VideoFileRepositoryInterface;
-use App\Streaming\Domain\Interfaces\VideoFileStorageInterface;
+use App\Streaming\Domain\Interfaces\VideoMetadataProbeInterface;
 use App\Streaming\Domain\Interfaces\VideoTranscoderInterface;
+use App\Streaming\Domain\Interfaces\VideoTranscodeStorageInterface;
 
 class TranscodeVideo
 {
     public function __construct(
         private VideoFileRepositoryInterface $videoFileRepository,
         private VideoTranscoderInterface $transcoder,
-        private VideoFileStorageInterface $storage,
+        private VideoMetadataProbeInterface $metadataProbe,
+        private VideoTranscodeStorageInterface $storage,
         private TransactionRunnerInterface $transactionRunner,
         private DomainEventDispatcherInterface $eventDispatcher,
         private bool $keepOriginalAfterProcessing,
@@ -47,25 +49,20 @@ class TranscodeVideo
             return;
         }
 
-        $outputPath = $this->storage->absolutePathInRoot($uuid->value().'.mp4');
-        $originalPath = (string) $videoFile->originalPath();
+        $outputLocation = $this->storage->locationForVideo($uuid->value().'.mp4');
+        $originalLocation = $videoFile->originalLocation();
 
         try {
-            $this->transcoder->transcodeToMp4($originalPath, $outputPath);
-            $metadata = $this->transcoder->probe($outputPath);
+            $this->transcoder->transcodeToMp4((string) $originalLocation?->key(), $outputLocation->key());
+            $metadata = $this->metadataProbe->probe($outputLocation);
 
-            $videoFile->markReady(
-                $outputPath,
-                $metadata['duration_seconds'],
-                $metadata['file_size_bytes'],
-                $metadata['audio_language'],
-            );
+            $videoFile->markReady($outputLocation, $metadata);
 
             $this->videoFileRepository->update($videoFile);
             $this->eventDispatcher->dispatch(VideoFileReady::create($videoFile->id(), $videoFile->movieId()));
 
-            if (! $this->keepOriginalAfterProcessing) {
-                $this->storage->delete($originalPath);
+            if (! $this->keepOriginalAfterProcessing && $originalLocation !== null) {
+                $this->storage->delete($originalLocation);
                 $videoFile->clearOriginalReference();
                 $this->videoFileRepository->update($videoFile);
             }
