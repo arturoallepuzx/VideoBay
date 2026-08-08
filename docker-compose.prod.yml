@@ -3,6 +3,7 @@ services:
   api:
     ports: []
     command: php-fpm
+    restart: unless-stopped
     volumes:
       - /var/lib/videobay:/var/lib/videobay
       - /mnt/videobay_media:/mnt/videobay_media
