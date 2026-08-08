@@ -30,14 +30,14 @@ jobs:
             git reset --hard origin/main
 
             echo "== Ensure base services are up =="
-            $DCP up -d db redis api worker scheduler
+            $DCP up -d db redis api worker storage_worker scheduler
 
             echo "== Backend deps + migrations =="
-            $DCP exec -T api composer install --no-interaction --optimize-autoloader
+            $DCP exec -T api composer install --no-dev --no-interaction --optimize-autoloader
             $DCP exec -T api php artisan migrate --force
 
             echo "== Recreate backend (new code + opcache) =="
-            $DCP up -d --force-recreate api worker scheduler
+            $DCP up -d --force-recreate api worker storage_worker scheduler
 
             echo "== Rebuild frontend (Angular, runs in foreground; fails the deploy on build error) =="
             $DCP build frontend
