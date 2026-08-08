@@ -21,5 +21,7 @@ RUN pecl install redis && docker-php-ext-enable redis
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 COPY uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+COPY opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+COPY zz-pool.conf /usr/local/etc/php-fpm.d/zz-pool.conf
 
 WORKDIR /var/www
