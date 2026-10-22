@@ -36,6 +36,10 @@ jobs:
             $DCP exec -T api composer install --no-dev --no-interaction --optimize-autoloader
             $DCP exec -T api php artisan migrate --force
 
+            echo "== Rebuild PHP images (latest PHP patch) =="
+            $DCP build --pull api worker storage_worker scheduler
+            $DCP run --rm --no-deps -T api php-fpm -t
+
             echo "== Recreate backend (new code + opcache) =="
             $DCP up -d --force-recreate api worker storage_worker scheduler
 
